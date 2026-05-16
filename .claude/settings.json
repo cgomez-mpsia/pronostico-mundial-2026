@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/beto/Workspace/UMSS/simoncloud-m3/templates -type f | sort)",
+      "Read(//Users/beto/Workspace/UMSS/simoncloud-m3/templates/**)",
+      "Bash(mkdir -p /Users/beto/Workspace/Mundial/.claude/skills/implement-uc /Users/beto/Workspace/Mundial/.claude/skills/drizzle-schema /Users/beto/Workspace/Mundial/.claude/skills/points-engine /Users/beto/Workspace/Mundial/.claude/skills/supabase-rls /Users/beto/Workspace/Mundial/.claude/skills/review-spec)",
+      "Edit(/.claude/skills/implement-uc/**)",
+      "Edit(/.claude/skills/drizzle-schema/**)",
+      "Edit(/.claude/skills/points-engine/**)",
+      "Edit(/.claude/skills/supabase-rls/**)",
+      "Edit(/.claude/skills/review-spec/**)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-git --yes)",
+      "Read(//Users/beto/Workspace/**)",
+      "Bash(npx create-next-app@latest pronostico-mundial-tmp --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-git --yes)",
+      "Bash(cp -r /Users/beto/Workspace/pronostico-mundial-tmp/. /Users/beto/Workspace/Mundial/)",
+      "Bash(rm -rf /Users/beto/Workspace/pronostico-mundial-tmp)",
+      "Bash(npm install *)",
+      "Bash(npx shadcn@latest init --defaults --base-color slate --css-variables)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npm run *)",
+      "Bash(node /Users/beto/Workspace/Mundial/node_modules/.bin/next build)",
+      "Bash(node -e \"require\\('/Users/beto/Workspace/Mundial/node_modules/next'\\)\")",
+      "Bash(node /Users/beto/Workspace/Mundial/node_modules/next/dist/bin/next build)",
+      "Bash(npx tsc *)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(node -e ' *)",
+      "Bash(npx vitest *)",
+      "Bash(npx shadcn@latest add input label --yes)",
+      "Bash(node /Users/beto/Workspace/Mundial/node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(npx shadcn@latest add card checkbox alert badge --yes)",
+      "Bash(git -C /Users/beto/Workspace/Mundial status)",
+      "Bash(git -C /Users/beto/Workspace/Mundial log --oneline -5)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ],
+    "additionalDirectories": [
+      "/Users/beto/Workspace/Mundial/.claude/skills"
+    ]
+  }
+}
