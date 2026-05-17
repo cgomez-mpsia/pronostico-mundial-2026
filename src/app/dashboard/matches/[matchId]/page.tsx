@@ -14,11 +14,13 @@ function formatBOT(date: Date) {
     month: "long",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   }).format(date);
 }
 
 const STAGE_LABELS: Record<string, string> = {
   group: "Fase de Grupos",
+  r32: "Dieciseisavos de Final",
   r16: "Octavos de Final",
   qf: "Cuartos de Final",
   sf: "Semifinales",
@@ -47,6 +49,12 @@ export default async function MatchDetailPage({
       deadlineAt: matches.deadlineAt,
       homeScore: matches.homeScore,
       awayScore: matches.awayScore,
+      homeScoreFull: matches.homeScoreFull,
+      awayScoreFull: matches.awayScoreFull,
+      extraTime: matches.extraTime,
+      matchWinnerId: matches.matchWinnerId,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
       status: matches.status,
       stage: matches.stage,
       tournamentId: matches.tournamentId,
@@ -63,6 +71,19 @@ export default async function MatchDetailPage({
   const now = new Date();
   const deadlinePassed = now >= matchRows.deadlineAt;
   const isFinished = matchRows.status === "finished";
+
+  const displayHomeScore = matchRows.extraTime && matchRows.homeScoreFull !== null
+    ? matchRows.homeScoreFull
+    : matchRows.homeScore;
+  const displayAwayScore = matchRows.extraTime && matchRows.awayScoreFull !== null
+    ? matchRows.awayScoreFull
+    : matchRows.awayScore;
+  const extraTimeBadge = matchRows.extraTime === "pen" ? "pen." : matchRows.extraTime === "aet" ? "a.e.t." : null;
+  const winnerName = matchRows.matchWinnerId
+    ? matchRows.matchWinnerId === matchRows.homeTeamId
+      ? (matchRows.homeTeamName ?? null)
+      : (matchRows.awayTeamName ?? null)
+    : null;
 
   // Todos los participantes del torneo con sus predicciones y puntos para este partido
   const rows = await db
@@ -109,9 +130,14 @@ export default async function MatchDetailPage({
             {matchRows.homeTeamName ?? "Por definir"}
           </span>
           {isFinished ? (
-            <span className="text-2xl font-bold tabular-nums">
-              {matchRows.homeScore} — {matchRows.awayScore}
-            </span>
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold tabular-nums">
+                {displayHomeScore} — {displayAwayScore}
+              </span>
+              {extraTimeBadge && (
+                <span className="text-xs font-medium text-zinc-400">({extraTimeBadge})</span>
+              )}
+            </div>
           ) : (
             <span className="text-sm text-zinc-400 tabular-nums">vs</span>
           )}
@@ -119,6 +145,11 @@ export default async function MatchDetailPage({
             {matchRows.awayTeamName ?? "Por definir"}
           </span>
         </div>
+        {isFinished && extraTimeBadge && winnerName && (
+          <p className="text-center text-sm text-zinc-500">
+            Avanza: <span className="font-medium">{winnerName}</span>
+          </p>
+        )}
         <p className="text-sm text-zinc-500 text-center">{formatBOT(matchRows.scheduledAt)}</p>
         {isFinished && (
           <p className="text-center text-xs text-zinc-400">Partido finalizado</p>

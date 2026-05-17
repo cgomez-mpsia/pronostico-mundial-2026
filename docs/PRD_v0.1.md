@@ -8,8 +8,8 @@
 | Campo            | Valor                                                    |
 |------------------|----------------------------------------------------------|
 | **Proyecto**     | Pronóstico Mundial 2026                                  |
-| **Versión**      | 0.1 (borrador inicial)                                   |
-| **Fecha**        | 2026-05-15                                               |
+| **Versión**      | 1.2                                                      |
+| **Fecha**        | 2026-05-17                                               |
 | **Autor**        | Alberto Gomez (carlos@brilliant.tech)                    |
 | **Cliente**      | Vladimir Mariaca Vargas (organizador del torneo)         |
 | **Estado**       | En revisión                                              |
@@ -23,6 +23,15 @@
 |---------|------------|-----------------|--------------------------------------|
 | 0.1     | 2026-05-15 | Alberto Gomez   | Borrador inicial basado en reglas del cliente y documento de invitación |
 | 0.2     | 2026-05-16 | Alberto Gomez   | v1 implementada y en producción. Agregadas US-018..025: gestión de fixture, puntos de campeón, desglose de puntos, vista del pozo, perfil de participante y partidos eliminatorios TBD y página de reglas (US-026). US-027..029: sidebar, settings y configuración del torneo. US-030: detalle de partido |
+| 1.2     | 2026-05-17 | Alberto Gomez   | US-049..052: admin fixture 2-col grid, login loading state (useFormStatus), avatar en standings, champion flag badge en avatar (standings + sidebar). REQ-107..112. BR-053..056. |
+| 1.1     | 2026-05-17 | Alberto Gomez   | US-048: UX loading states — spinner Loader2 en todos los botones async, inputs deshabilitados durante submit, toast Realtime, prediction-row label/AlertDialog. REQ-101..106. BR-048..052. |
+| 1.0     | 2026-05-17 | Alberto Gomez   | US-047: detalle de partido — score real para AET/PEN (120 min), badge de resolución y equipo que avanza. REQ-097..100. BR-046..047. |
+| 0.9     | 2026-05-17 | Alberto Gomez   | Decisión del cliente Opción A confirmada (tiempo de descuento incluido en 90 min). US-046: admin fixture card UX — hero CSS Grid, inputs vacíos, reveal condicional AET/PEN. REQ-093..096. BR-043..045. |
+| 0.8     | 2026-05-17 | Alberto Gomez   | US-045: prediction card UX polish — score centrado (CSS Grid), deadline 24h, meta-line sin redundancias, sin etiqueta de etapa duplicada, botón compacto, indicador de guardado. REQ-087..092. BR-037..042. |
+| 0.7     | 2026-05-17 | Alberto Gomez   | US-039..044: UX global — breadcrumbs, sidebar colapsable, login-01, admin home dashboard-01, data-table participantes, settings layout. REQ-076..086. BR-030..035. |
+| 0.6     | 2026-05-17 | Alberto Gomez   | US-038: registro de resultado complejo (multi-score: 90 min + AET + penales). REQ-072..075. US-031 actualizado con escenarios correctos (AET muestra score de 120 min, no de 90). Pendiente decisión del cliente sobre goles en tiempo de descuento. |
+| 0.5     | 2026-05-17 | Alberto Gomez   | US-037: rediseño de tarjeta de partido — layout FIFA con hora/score como protagonista. REQ-068..071 correspondientes. |
+| 0.4     | 2026-05-17 | Alberto Gomez   | US-036: código FIFA de 3 letras en tarjeta de partido (mobile UX). REQ-066..067 correspondientes. |
 | 0.3     | 2026-05-17 | Alberto Gomez   | Nuevas US-031..034: resultado completo en eliminatoria (a.e.t./pen.), fixture con banderas y agrupación por jornada, tabla de clasificación de grupos. US-035 pendiente de análisis: auto-bracket eliminatorio. REQ-058..065 correspondientes. |
 
 ---
@@ -1364,10 +1373,12 @@ Feature: Resultado completo en eliminatoria
 
   Scenario: Partido eliminatorio decidido en tiempo extra
     Given que el partido "España vs Alemania" terminó 1-1 en 90 minutos
-    And España marcó en el minuto 104, terminando 2-1 en tiempo extra
+    And España marcó en el minuto 104, terminando 2-1 al final de la prórroga
     When veo el partido en el fixture o en la página de detalle
-    Then veo el marcador "1 - 1" con el badge "a.e.t."
+    Then veo el marcador "2 - 1" con el badge "a.e.t."
     And veo que España es el equipo ganador del partido
+    # Nota: se muestra el score de AET (2-1), no el de 90 min (1-1)
+    # El score de 90 min (1-1) se usa para los puntos, pero la UI muestra el resultado final
 
   Scenario: Los puntos se calculan sobre el marcador de 90 minutos
     Given que yo pronostiqué 1-1 para el partido "Argentina vs Francia"
@@ -1375,16 +1386,64 @@ Feature: Resultado completo en eliminatoria
     Then recibo 3 puntos (resultado acertado + score exacto)
     And el badge "pen." no afecta mis puntos
 
-  Scenario: Admin registra resultado con tiempo extra
-    Given que soy admin y el partido "Argentina vs Francia" terminó
-    When ingreso el marcador 1-1 (90 min) para un partido eliminatorio
-    Then el sistema muestra: "¿Cómo se decidió el partido? [Tiempo extra | Penales]"
-    And selecciono "Penales" y el equipo ganador "Argentina"
-    Then el resultado queda registrado con badge "pen." y ganador Argentina
+  Scenario: Admin registra resultado eliminatorio en penales (sin goles en prórroga)
+    Given que soy admin y el partido "Argentina vs Francia" terminó 1-1 en 90 min y 1-1 en 120 min
+    When ingreso: score 90 min = 1-1, score 120 min = 1-1, tipo = Penales, ganador = Argentina
+    Then el resultado queda registrado con home_score=1, away_score=1, home_score_full=1, away_score_full=1
+    And badge "pen." y ganador Argentina
+
+  Scenario: Admin registra resultado eliminatorio en prórroga (AET con goles)
+    Given que soy admin y el partido "España vs Alemania" terminó 1-1 en 90 min y 2-1 en prórroga
+    When ingreso: score 90 min = 1-1, score 120 min = 2-1, tipo = Tiempo extra
+    Then home_score = 1, away_score = 1 (para puntos)
+    And home_score_full = 2, away_score_full = 1 (para display)
+    And ganador se deduce automáticamente del score de 120 min (España)
 ```
 
-**Reglas de negocio referenciadas:** BR-023, BR-011, RB-03
-**Prioridad:** Alta | **Story Points:** 3
+**Reglas de negocio referenciadas:** BR-023, BR-029, BR-011, RB-03
+**Prioridad:** Alta | **Story Points:** 5
+
+---
+
+#### PRD-US-038: Admin registra resultado completo con múltiples marcadores
+
+**Como** administrador,
+**quiero** poder ingresar el marcador a los 90 minutos Y el marcador al finalizar los 120 minutos (cuando aplique) en partidos eliminatorios,
+**para** que el sistema calcule puntos correctamente (sobre los 90 min) y muestre el resultado real del partido (120 min) a los participantes.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Formulario de resultado con multi-score
+
+  Scenario: Partido de grupos — solo un marcador
+    Given que soy admin registrando un partido de fase de grupos
+    When abro el formulario de resultado
+    Then solo veo dos inputs: marcador local y marcador visitante
+    And no hay opciones de tiempo extra ni penales
+
+  Scenario: Partido eliminatorio decidido en 90 min — solo un marcador
+    Given que soy admin registrando un partido eliminatorio con marcador 2-0
+    When ingreso 2-0 (scores distintos)
+    Then no aparece paso de desempate
+    And no se solicita marcador de 120 min
+
+  Scenario: Partido eliminatorio igualado — flujo completo
+    Given que soy admin registrando un partido eliminatorio con 1-1 en 90 min
+    When ingreso 1-1
+    Then el formulario muestra: "¿Cómo se decidió? [Tiempo extra | Penales]"
+
+  Scenario: Admin corrige un resultado ya registrado
+    Given que el partido ya tiene status = finished con resultado 2-0
+    When el admin modifica los inputs y presiona "Corregir resultado"
+    Then aparece un diálogo: "¿Recalcular puntos para todos los participantes con el nuevo marcador?"
+    And al confirmar, el sistema recalcula y actualiza el card
+```
+
+**⚠ Decisión pendiente:** Si hay goles en el tiempo de descuento (ej. 1-2 al min 90, 2-2 al min 90+3), ¿el marcador para pronósticos es el del minuto 90 exacto o el del pitido final? Enviado al cliente el 17-May-2026. Ver análisis en FSD-UC-004 flujo UC004-A8.
+
+**Reglas de negocio referenciadas:** BR-011, BR-023, BR-029, RB-03
+**Prioridad:** Alta | **Story Points:** 8
 
 ---
 
@@ -1452,6 +1511,90 @@ Feature: Tabla de clasificación de grupos
 
 ---
 
+#### PRD-US-037: Ver tarjeta de partido con layout centrado en hora/score (Participante)
+
+**Como** participante,
+**quiero** que las tarjetas de partido muestren la hora o el score como elemento central y dominante, flanqueado por código + bandera de cada equipo,
+**para** identificar de un vistazo cuándo juega cada partido y cuál fue el resultado, sin tener que buscar la hora entre líneas de texto secundario.
+
+**Layout esperado (partido programado, pronóstico abierto):**
+```
+[CODE] [flag]   [input — input]   [flag] [CODE]
+              Primera fase
+        Grupo A  ·  Cierra: mié 10 jun 15:00
+        [Guardar pronóstico]
+```
+
+**Layout esperado (partido finalizado):**
+```
+[CODE] [flag]   2 — 1   [flag] [CODE]
+                (pen.)
+             Avanza: México
+              Primera fase
+           Grupo A  ·  Finalizado
+```
+
+**Layout esperado (partido programado, plazo cerrado):**
+```
+[CODE] [flag]   1 — 0 (mi pronóstico)   [flag] [CODE]
+              Primera fase
+              Grupo A
+              [Ver pronósticos →]
+```
+
+**Criterios de aceptación:**
+```gherkin
+Scenario: Hora visible como elemento principal
+  Given el partido tiene estado "scheduled"
+  When visualizo la tarjeta del partido
+  Then la hora (ej. "15:00") es el elemento más grande y centrado de la tarjeta
+  And los equipos aparecen como "[CODE] [bandera]" a cada lado de la hora
+
+Scenario: Score como elemento principal en partido finalizado
+  Given el partido tiene estado "finished"
+  When visualizo la tarjeta
+  Then el score "2 — 1" ocupa el lugar central de la tarjeta
+  And si aplica, el badge "(pen.)" o "(a.e.t.)" aparece debajo del score
+  And "Avanza: [nombre equipo]" aparece si hubo tiempo extra o penales
+
+Scenario: Etapa visible dentro de la tarjeta
+  Given cualquier partido del fixture
+  When visualizo la tarjeta
+  Then la etiqueta de la etapa ("Primera fase", "Cuartos de Final", etc.) es visible dentro de la tarjeta
+  And la fecha del partido NO aparece dentro de la tarjeta (ya es encabezado de sección)
+```
+
+**Reglas de negocio referenciadas:** BR-027, BR-028
+**Prioridad:** Media — depende de BR-027 (campo `teams.code`)
+
+---
+
+#### PRD-US-036: Ver tarjeta de partido con código de equipo en móvil (Participante)
+
+**Como** participante,
+**quiero** que las tarjetas de partido muestren el código FIFA de 3 letras de cada equipo (ej. MEX, ARG) junto a la bandera en la zona del score,
+**para** identificar los equipos de un vistazo sin que los nombres largos se corten en pantalla pequeña.
+
+**Criterios de aceptación:**
+```gherkin
+Scenario: Tarjeta muestra código FIFA en zona de score
+  Given soy participante y veo el fixture en móvil
+  When visualizo la tarjeta del partido México vs Bosnia y Herzegovina
+  Then veo "MEX" y "BIH" junto a las banderas en la zona del score
+  And no hay texto truncado ni "..." en esa zona
+
+Scenario: Código siempre presente aunque no haya score
+  Given el partido aún no ha comenzado
+  When visualizo la tarjeta del partido
+  Then los campos de ingreso de pronóstico muestran "MEX" y "BIH" con sus banderas
+  And el código es visible tanto en desktop como en móvil
+```
+
+**Reglas de negocio referenciadas:** BR-027
+**Prioridad:** Media
+
+---
+
 #### PRD-US-034: Auto-bracket eliminatorio *(Análisis pendiente — v2)*
 
 **Como** admin,
@@ -1460,8 +1603,630 @@ Feature: Tabla de clasificación de grupos
 
 > **Estado:** Pendiente de análisis. Requiere estudiar y hardcodear la tabla de distribución de terceros de la FIFA 2026 (reglas para qué grupos avanza su 3er lugar a qué bracket de R32). El admin puede asignar los equipos manualmente en v1.
 
-**Reglas de negocio referenciadas:** BR-026
+**Reglas de negocio referenciadas:** BR-036
 **Prioridad:** Could Have — v2
+
+---
+
+#### PRD-US-039: Ver breadcrumbs de navegación en el header (Participante / Admin)
+
+**Como** usuario autenticado,
+**quiero** ver en el header de cada página el camino de navegación actual (breadcrumbs),
+**para** saber siempre en qué sección estoy, especialmente en rutas profundas como el detalle de un partido.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Breadcrumbs en header
+
+  Scenario: Participante en fixture
+    Given que soy participante y estoy en /dashboard
+    When cargo la página
+    Then el header muestra: "Fixture"
+
+  Scenario: Admin en detalle de partido
+    Given que soy admin y estoy en /admin/fixture/[matchId]
+    When cargo la página
+    Then el header muestra: "Admin › Partidos › Argentina vs Francia"
+
+  Scenario: Mobile — breadcrumb como título de página
+    Given que estoy en /dashboard/standings en un dispositivo móvil
+    When el sidebar está cerrado
+    Then el header muestra "Tabla de Posiciones" como único texto visible (sin sidebar)
+```
+
+**Referencia de implementación:** shadcn/ui block `sidebar-10` · componente `<Breadcrumb>` de shadcn/ui
+**Reglas de negocio referenciadas:** BR-030
+**Prioridad:** Alta | **Story Points:** 3
+
+---
+
+#### PRD-US-040: Sidebar con sección Admin colapsable (Admin)
+
+**Como** administrador,
+**quiero** que la sección "Panel Admin" del sidebar sea colapsable y se expanda automáticamente cuando navego por rutas de admin,
+**para** que el sidebar no sea visualmente largo cuando estoy usando la app como participante.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Admin sidebar colapsable
+
+  Scenario: Admin en ruta de participante
+    Given que soy admin y estoy en /dashboard
+    When cargo la página
+    Then la sección "Admin" del sidebar está colapsada por defecto
+    And puedo expandirla manualmente con un click
+
+  Scenario: Admin en ruta de admin
+    Given que soy admin y estoy en /admin/fixture
+    When cargo la página
+    Then la sección "Admin" del sidebar está expandida automáticamente
+    And el ítem "Partidos" aparece como activo
+
+  Scenario: Labels sin duplicados
+    Given que soy admin y veo el sidebar
+    Then el ítem de fixture del admin dice "Partidos" (no "Fixture")
+    And el ítem de configuración del footer dice "Mi Cuenta" (no "Settings")
+```
+
+**Referencia de implementación:** shadcn/ui block `sidebar-07` · componente `<Collapsible>` de shadcn/ui
+**Reglas de negocio referenciadas:** BR-031, BR-032
+**Prioridad:** Media | **Story Points:** 2
+
+---
+
+#### PRD-US-041: Login page con card centrado (Participante / Admin)
+
+**Como** usuario,
+**quiero** una página de login limpia con formulario en card centrado,
+**para** ingresar mis credenciales de forma clara sin elementos distractores ni confusión sobre auto-registro.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Login page
+
+  Scenario: Página de login limpia
+    Given que no estoy autenticado
+    When navego a /login
+    Then veo un card centrado con el nombre del torneo como título
+    And veo campos de email y contraseña
+    And NO veo ningún link de "Registrarse" ni "Crear cuenta"
+    And NO veo imágenes decorativas ni sidebar
+
+  Scenario: Error de credenciales
+    Given que ingreso credenciales incorrectas
+    When presiono "Iniciar sesión"
+    Then veo un mensaje de error dentro del card
+
+  Scenario: Redirect post-login
+    Given que soy admin y me autentico correctamente
+    Then soy redirigido a /admin
+    Given que soy participante y me autentico correctamente
+    Then soy redirigido a /dashboard
+```
+
+**Referencia de implementación:** shadcn/ui block `login-01`
+**Reglas de negocio referenciadas:** BR-033
+**Prioridad:** Media | **Story Points:** 2
+
+---
+
+#### PRD-US-042: Admin home con stat cards (Admin)
+
+**Como** administrador,
+**quiero** ver en la página de inicio del panel las estadísticas clave del torneo en stat cards visuales,
+**para** captar el estado del torneo de un vistazo y detectar acciones urgentes (ej. partidos sin resultado).
+
+**Layout esperado:**
+```
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│     24       │ │     104      │ │    1,872     │ │  Bs. 12,000  │
+│ Participantes│ │   Partidos   │ │  Pronósticos │ │     Pozo     │
+│ 2 pendientes │ │ 8 sin result.│ │              │ │              │
+└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
+```
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Admin home stat cards
+
+  Scenario: Ver resumen del torneo
+    Given hay 24 participantes (22 pagados, 2 pendientes)
+    And 104 partidos (8 sin resultado registrado)
+    And 1872 pronósticos ingresados
+    When navego a /admin
+    Then veo 4 stat cards con esos valores
+    And la card de participantes muestra "2 pendientes de pago" en subtítulo
+    And la card de partidos muestra "8 sin resultado" en subtítulo
+
+  Scenario: Clic en stat card navega a la sección
+    Given que veo la card de participantes
+    When hago clic en la card
+    Then navego a /admin/participants
+```
+
+**Referencia de implementación:** shadcn/ui block `dashboard-01`
+**Reglas de negocio referenciadas:** BR-034
+**Prioridad:** Media | **Story Points:** 3
+
+---
+
+#### PRD-US-043: Tabla de participantes admin con filtros y menú contextual (Admin)
+
+**Como** administrador,
+**quiero** filtrar y ordenar la tabla de participantes, y ejecutar acciones sobre cada fila desde un menú contextual,
+**para** gestionar pagos y contraseñas eficientemente sin tener que recorrer la lista completa.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Data table de participantes
+
+  Scenario: Filtrar participantes con pago pendiente
+    Given hay 24 participantes (22 pagados, 2 pendientes)
+    When aplico el filtro "Pago pendiente"
+    Then la tabla muestra solo los 2 participantes con has_paid = false
+
+  Scenario: Ordenar por nombre
+    Given que veo la tabla de participantes
+    When hago click en la columna "Nombre"
+    Then los participantes se ordenan alfabéticamente
+
+  Scenario: Acciones por fila
+    Given que veo la tabla
+    When hago click en el menú "⋮" de la fila de Juan Pérez
+    Then veo opciones: "Marcar como pagado" y "Resetear contraseña"
+    And al seleccionar "Marcar como pagado" se actualiza el estado inline sin recargar
+
+  Scenario: Columnas de la tabla
+    Given que veo la tabla
+    Then cada fila muestra: Avatar, Nombre, Email, Estado de pago (badge), Campeón (bandera/código), Fecha de inscripción, Menú de acciones
+```
+
+**Referencia de implementación:** shadcn/ui `data-table` + `dropdown-menu` por fila
+**Reglas de negocio referenciadas:** BR-035
+**Prioridad:** Media | **Story Points:** 5
+
+---
+
+#### PRD-US-044: Settings con layout de cards por sección (Participante)
+
+**Como** participante,
+**quiero** que la página de configuración de mi cuenta organice cada sección (foto, contraseña, estado de pago) en cards separados,
+**para** entender claramente qué puedo modificar y qué es solo informativo.
+
+**Layout esperado:**
+```
+Configuración de cuenta
+├─ [Card] Foto de perfil
+│    [Avatar 64px]  [Subir nueva foto]
+│
+├─ [Card] Contraseña
+│    Contraseña actual ___
+│    Nueva contraseña ___
+│    [Guardar contraseña]
+│
+└─ [Card] Estado de inscripción  (read-only)
+     ✓ Cuota pagada · Bs. 500
+     Inscrito el 12 may. 2026
+```
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Settings con cards
+
+  Scenario: Layout de cards
+    Given que estoy en /settings
+    Then veo tres cards separados: Foto de perfil, Contraseña, Estado de inscripción
+    And el card de estado de inscripción no tiene campos editables
+
+  Scenario: Feedback visual por sección
+    Given que cambio mi contraseña exitosamente
+    Then el card de contraseña muestra un toast de éxito
+    And el card de foto muestra el nuevo avatar inmediatamente
+```
+
+**Reglas de negocio referenciadas:** BR-020
+**Prioridad:** Baja | **Story Points:** 2
+
+---
+
+#### PRD-US-045: Prediction card — pulido visual (Participante)
+
+**Como** participante,
+**quiero** que cada tarjeta de partido en el fixture tenga un layout limpio, sin información redundante y con un indicador visible de si ya guardé mi pronóstico,
+**para** navegar el fixture de 104 partidos de manera eficiente y no perder ningún pronóstico por olvido.
+
+**Layout esperado (card abierto — partido con inputs):**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  MEX 🏴  [  ]  —  [  ]  🏴 CAN                   ✓ Guardado  │
+│  Cierra: mar, 10 jun, 15:00           [ Guardar pronóstico → ]  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Layout esperado (card cerrado — partido programado sin pronóstico):**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  MEX 🏴     15:00     🏴 CAN                                   │
+│  Cierra: mar, 10 jun, 15:00                                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Prediction card — pulido visual
+
+  Scenario: Score centrado con equipos de nombres asimétricos
+    Given la tarjeta muestra "Bosnia y Herzegovina" vs "Canadá"
+    Then el score o los inputs están centrados matemáticamente en el card
+    And ningún equipo "empuja" el score hacia un lado
+
+  Scenario: Plazo en formato 24h
+    Given un partido con deadline a las 15:00 BOT
+    When veo la tarjeta del partido
+    Then el plazo muestra "Cierra: mar, 10 jun, 15:00"
+    And no aparece el formato "03:00 p. m." ni "a. m."
+
+  Scenario: Meta-line sin redundancia
+    Given un partido con horario 15:00 y deadline mié 10 jun 15:00
+    When el card está en estado abierto (con inputs)
+    Then la meta-line muestra solo "Cierra: mié, 10 jun, 15:00"
+    And no repite el horario "15:00" como dato separado en la meta-line
+
+  Scenario: Sin etiqueta de etapa duplicada
+    Given que el fixture muestra la sección "Primera fase"
+    Then los cards dentro de esa sección no muestran "Primera fase" en su cuerpo
+
+  Scenario: Botón compacto
+    Given el partido está abierto para pronósticos
+    When veo el card
+    Then el botón "Guardar pronóstico" tiene tamaño sm y no es full-width
+    And está alineado a la derecha del card
+
+  Scenario: Indicador de pronóstico guardado
+    Given que guardé el pronóstico "2-1" para un partido
+    When veo el card en estado cerrado (collapsed)
+    Then veo un indicador visible (ej. ✓ Guardado) sin tener que expandir el card
+
+  Scenario: Sin indicador cuando no hay pronóstico
+    Given que no he ingresado pronóstico para un partido
+    When veo el card cerrado
+    Then no hay indicador de "Guardado"
+```
+
+**Reglas de negocio referenciadas:** BR-037, BR-038, BR-039, BR-040, BR-041, BR-042
+**Prioridad:** Media | **Story Points:** 3
+
+---
+
+#### PRD-US-046: Admin fixture card — UX del formulario de resultado (Admin)
+
+**Como** administrador del torneo,
+**quiero** que el card de fixture del panel admin presente un formulario de resultado claro, con inputs vacíos por defecto y una sección de desempate que aparezca solo cuando el partido lo requiera,
+**para** registrar resultados rápidamente sin riesgo de errores, tanto en partidos simples de grupo como en eliminatorias que van a prórroga o penales.
+
+**Estados del card:**
+
+```
+Estado 1 — scheduled (sin resultado)
+┌──────────────────────────────────────────────────────────────────┐
+│  MEX 🇲🇽           15:00           🇿🇦 SUD                     │
+│  Fase de Grupos · jue, 11 jun                                    │
+├──────────────────────────────────────────────────────────────────┤
+│  [ — ]  —  [ — ]               [Registrar resultado →] (dim)   │
+└──────────────────────────────────────────────────────────────────┘
+
+Estado 2 — scheduled, partido eliminatorio, scores iguales ingresados
+┌──────────────────────────────────────────────────────────────────┐
+│  ESP 🇪🇸           22:00           🇩🇪 GER                     │
+│  Octavos de Final · sáb, 28 jun                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Resultado 90 min: [ 1 ]  —  [ 1 ]                              │
+│  ┌─ Empate al pitido ─────────────────────────────────────────┐  │
+│  │  ○ Tiempo extra (a.e.t.)   ● Penales                      │  │
+│  │  Resultado 120 min: [ 1 ]  —  [ 1 ]                       │  │
+│  │  Ganador en penales: [ España ▼ ]                         │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                              [Registrar resultado →]              │
+└──────────────────────────────────────────────────────────────────┘
+
+Estado 3 — finished (resultado registrado)
+┌──────────────────────────────────────────────────────────────────┐
+│  MEX 🇲🇽            2  —  1            🇿🇦 SUD                  │
+│  Fase de Grupos · jue, 11 jun                    ✓ Finalizado   │
+├──────────────────────────────────────────────────────────────────┤
+│  [Corregir resultado]  ← variant=outline, no primario            │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Admin fixture card — formulario de resultado
+
+  Scenario: Inputs vacíos por defecto
+    Given el partido está en estado scheduled
+    When el admin ve el card
+    Then los inputs de resultado muestran placeholder "—" (no el valor "0")
+    And el botón "Registrar resultado" está deshabilitado
+
+  Scenario: Botón se activa al completar ambos inputs
+    Given el admin ingresa "2" en el input local y "1" en el visitante
+    Then el botón "Registrar resultado" se habilita
+
+  Scenario: Sin sección de desempate en fase de grupos
+    Given el partido tiene stage = 'group'
+    When el admin ingresa "2" — "2"
+    Then NO aparece la sección "¿Cómo se resolvió?"
+    And el botón "Registrar resultado" está habilitado
+
+  Scenario: Reveal de sección AET/PEN en eliminatoria con empate
+    Given el partido tiene stage = 'r16'
+    When el admin ingresa "1" — "1"
+    Then aparece la sección "¿Cómo se resolvió?" con opciones AET / Penales
+    And el botón "Registrar resultado" permanece deshabilitado hasta completar
+
+  Scenario: Sin sección de desempate en eliminatoria sin empate
+    Given el partido tiene stage = 'qf'
+    When el admin ingresa "2" — "1"
+    Then NO aparece la sección de desempate
+    And el botón "Registrar resultado" está habilitado
+
+  Scenario: Score centrado con equipos asimétricos
+    Given el card muestra "Bosnia y Herzegovina" vs "Canadá"
+    Then la hora o el score están centrados matemáticamente
+    And el nombre largo no desplaza el hero hacia un lado
+
+  Scenario: Card post-registro muestra el score como hero
+    Given el admin acaba de registrar el resultado 2-1
+    Then el card muestra "2 — 1" como hero visual
+    And no muestra los inputs de registro
+    And muestra el botón "Corregir resultado" en estilo discreto
+
+  Scenario: Confirmación antes de corregir resultado ya registrado
+    Given el partido tiene status = 'finished'
+    When el admin hace clic en "Corregir resultado"
+    Then aparece un diálogo: "Corregir este resultado recalculará los puntos de todos los participantes. ¿Continuar?"
+    And solo al confirmar se habilita el formulario en modo edición
+```
+
+**Reglas de negocio referenciadas:** BR-023, BR-029, BR-043, BR-044, BR-045
+**Prioridad:** Alta | **Story Points:** 5
+
+---
+
+#### PRD-US-047: Detalle de partido — score real AET/PEN y badge de resolución (Participante / Admin)
+
+**Como** participante o administrador,
+**quiero** que la página de detalle de un partido finalizado muestre el marcador real del partido (el del pitido final de los 120 min si hubo prórroga o penales) junto con el badge que indica cómo se resolvió y el nombre del equipo que avanzó,
+**para** tener una imagen completa del resultado sin tener que volver al fixture principal.
+
+**Comportamiento esperado en el encabezado de la página:**
+
+```
+Partido resuelto en 90 min:
+  Argentina  3 — 2  Francia
+  Semifinales · lun, 8 jun  ·  Finalizado
+
+Partido resuelto en AET:
+  Argentina  2 — 2  Francia     ← score de 90 min visible solo si difiere
+  Argentina  3 — 2  Francia
+              (a.e.t.)
+  Avanza: Argentina
+  Semifinales · lun, 8 jun  ·  Finalizado
+
+Partido resuelto en penales:
+  Argentina  1 — 1  Francia     ← score de 120 min
+              (pen.)
+  Avanza: Argentina
+  Semifinales · lun, 8 jun  ·  Finalizado
+```
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Detalle de partido — score AET/PEN
+
+  Scenario: Partido finalizado en 90 min
+    Given "Argentina vs Francia" finalizó 3-2 sin prórroga
+    When accedo al detalle del partido
+    Then el header muestra "3 — 2"
+    And no aparece ningún badge de resolución
+
+  Scenario: Partido finalizado en AET
+    Given "España vs Alemania" terminó 1-1 en 90 min y 2-1 en 120 min
+    When accedo al detalle del partido
+    Then el header muestra "2 — 1"
+    And veo el badge "(a.e.t.)"
+    And veo "Avanza: España"
+
+  Scenario: Partido finalizado en penales
+    Given "Brasil vs Croacia" terminó 1-1 en 120 min, Brasil ganó en penales
+    When accedo al detalle del partido
+    Then el header muestra "1 — 1"
+    And veo el badge "(pen.)"
+    And veo "Avanza: Brasil"
+```
+
+**Reglas de negocio referenciadas:** BR-029, BR-046, BR-047
+**Prioridad:** Alta | **Story Points:** 2
+
+---
+
+#### PRD-US-048: UX — Loading states y feedback visual en acciones async (Participante / Admin)
+
+**Como** usuario (participante o administrador),
+**quiero** recibir feedback visual inmediato y claro (spinner animado, label descriptivo, inputs bloqueados) cuando cualquier acción asíncrona está en curso,
+**para** saber que mi interacción fue registrada y que el sistema está procesando — sin que la UI quede congelada ni ambigua.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Loading states en acciones async
+
+  Scenario: Botón con spinner durante fetch
+    Given que presiono cualquier botón de acción (guardar, crear, aplicar, etc.)
+    Then el botón se deshabilita
+    And aparece un spinner animado (Loader2) a la izquierda del texto
+    And el texto cambia a una variante en gerundio ("Guardando…", "Creando…", etc.)
+    Until el request completa
+
+  Scenario: Inputs bloqueados durante submit
+    Given que envío un formulario con campos de texto
+    Then todos los inputs del formulario quedan deshabilitados mientras el POST está en vuelo
+    And no puedo editar valores ni reenviar el formulario hasta que el request complete
+
+  Scenario: Toast Realtime
+    Given que el admin registra un resultado mientras yo tengo el dashboard abierto
+    Then aparece un toast informativo "Resultados actualizados" (duración 2.5 s)
+    And la pantalla se refresca con los nuevos datos
+```
+
+**Reglas de negocio referenciadas:** BR-048, BR-049, BR-050, BR-051, BR-052
+**Prioridad:** Media | **Story Points:** 2
+
+---
+
+#### PRD-US-049: Admin fixture — grid de 2 columnas y skeleton actualizado (Admin)
+
+**Como** administrador del torneo,
+**quiero** que el listado de partidos del panel admin use el mismo layout de 2 columnas que el fixture del participante,
+**para** tener una experiencia visual consistente y poder ver más partidos a la vez en pantallas medianas y grandes.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Admin fixture — layout 2 columnas
+
+  Scenario: Grid 2 columnas en pantallas sm+
+    Given que soy admin y navego a /admin/fixture
+    When la pantalla es de ancho sm o mayor
+    Then los cards de partidos se muestran en 2 columnas
+
+  Scenario: 1 columna en mobile
+    Given que soy admin y navego a /admin/fixture en mobile
+    Then los cards se muestran en 1 columna
+
+  Scenario: Skeleton refleja estructura real del card
+    Given que la página está cargando
+    Then el skeleton muestra: hero row (nombre/bandera/hora), meta line, divisor y área de formulario con inputs de score y botón
+    And el skeleton usa el mismo grid de 2 columnas
+```
+
+**Reglas de negocio referenciadas:** BR-053
+**Prioridad:** Media | **Story Points:** 1
+
+---
+
+#### PRD-US-050: Login page — loading state via useFormStatus (Participante)
+
+**Como** participante,
+**quiero** que el formulario de login muestre feedback visual mientras la autenticación está en curso,
+**para** saber que mi solicitud fue recibida y evitar pulsar el botón múltiples veces.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Login form loading state
+
+  Scenario: Botón con spinner durante autenticación
+    Given que ingreso mis credenciales y presiono "Iniciar sesión"
+    Then el botón cambia su label a "Iniciando sesión…"
+    And aparece un spinner Loader2 animado en el botón
+    And el botón queda deshabilitado
+    Until la autenticación completa o falla
+
+  Scenario: Inputs deshabilitados durante submit
+    Given que el Server Action de login está en vuelo
+    Then los campos de email y contraseña quedan deshabilitados
+    And no puedo editar los valores hasta que el request complete
+```
+
+**Reglas de negocio referenciadas:** BR-054, BR-048, BR-049
+**Prioridad:** Media | **Story Points:** 1
+
+---
+
+#### PRD-US-051: Avatar en tabla de posiciones (Participante)
+
+**Como** participante,
+**quiero** ver el avatar de cada participante en la tabla de posiciones,
+**para** identificar a mis rivales más fácilmente y tener una experiencia más personalizada.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Avatar en standings table
+
+  Scenario: Participante con foto de perfil
+    Given que un participante tiene foto de perfil cargada
+    When veo la tabla de posiciones
+    Then aparece su foto como avatar de 28px en su fila
+
+  Scenario: Participante sin foto de perfil
+    Given que un participante no tiene foto de perfil
+    When veo la tabla de posiciones
+    Then aparece un círculo con sus iniciales (primera letra del nombre + primera del apellido) sobre fondo zinc
+    And el tamaño es 28px
+
+  Scenario: API incluye avatarUrl
+    Given que se consulta /api/standings
+    Then la respuesta incluye el campo avatarUrl por participante
+```
+
+**Reglas de negocio referenciadas:** BR-055, BR-014, BR-019
+**Prioridad:** Media | **Story Points:** 2
+
+---
+
+#### PRD-US-052: Champion flag badge en avatar — standings y sidebar (Participante)
+
+**Como** participante,
+**quiero** ver la bandera del campeón elegido de cada participante como un pequeño badge sobre su avatar,
+**para** conocer la elección estratégica de cada uno de un vistazo sin necesitar ir a la página de campeón.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Champion flag badge en avatar
+
+  Scenario: Badge visible en standings cuando hay campeón seleccionado
+    Given que un participante ha elegido su campeón
+    When veo la tabla de posiciones
+    Then su avatar muestra el badge de bandera del equipo campeón (10×14px)
+    And el badge está posicionado en la esquina inferior derecha del avatar
+    And el badge tiene un ring blanco de contraste
+    And al pasar el cursor sobre el badge se muestra el nombre del equipo
+
+  Scenario: Sin badge cuando no hay campeón seleccionado
+    Given que un participante aún no eligió su campeón
+    When veo la tabla de posiciones
+    Then su avatar no muestra ningún badge
+
+  Scenario: Badge en sidebar proporcional al tamaño del avatar
+    Given que soy un participante con campeón elegido
+    When veo el sidebar de navegación
+    Then mi avatar muestra el badge de bandera del campeón al 45% del diámetro del avatar
+    And está posicionado en la esquina inferior derecha
+
+  Scenario: API incluye datos del campeón
+    Given que se consulta /api/standings
+    Then la respuesta incluye championFlagUrl y championTeamName para cada participante con campeón
+
+  Scenario: Layouts usan getLayoutUserData helper
+    Given que navego cualquier página autenticada
+    Then el sidebar recibe championFlagUrl y championTeamName del usuario autenticado
+    And los obtiene vía el helper getLayoutUserData(userId) en src/lib/layout-data.ts
+```
+
+**Reglas de negocio referenciadas:** BR-056, BR-007, BR-014
+**Prioridad:** Media | **Story Points:** 3
 
 ---
 
@@ -1672,8 +2437,55 @@ Feature: Tabla de clasificación de grupos
 | PRD-REQ-061 | Debe existir una vista "Ver grupos" accesible desde el fixture que muestre la tabla de clasificación de todos los grupos calculada en tiempo real desde los resultados registrados. | PRD-US-033 | Media |
 | PRD-REQ-062 | El orden en la tabla de grupos debe seguir criterios FIFA: Pts → DG → GF → resultado directo. En caso de igualdad total, orden alfabético como fallback. | PRD-US-033 | Media |
 | PRD-REQ-063 | El formulario de registro de resultado (admin) debe mostrar campos de tiempo extra y equipo ganador condicionalmente, solo cuando el partido es de fase eliminatoria y los scores son iguales. | PRD-US-031 | Alta |
-| PRD-REQ-064 | La vista de detalle de partido y el fixture deben mostrar el badge `(pen.)` o `(a.e.t.)` cuando corresponda, junto al marcador de 90 minutos. | PRD-US-031 | Alta |
+| PRD-REQ-064 | La vista de detalle de partido y el fixture deben mostrar el badge `(pen.)` o `(a.e.t.)` cuando corresponda. Para AET (`extra_time = 'aet'`): mostrar `home_score_full`/`away_score_full` (score al fin de los 120 min). Para penales (`extra_time = 'pen'`): mostrar `home_score_full`/`away_score_full` con badge. El score de 90 min queda implícito pero no se muestra por separado. | PRD-US-031, PRD-US-038 | Alta |
 | PRD-REQ-065 | *(v2)* El sistema debe proponer automáticamente los emparejamientos de R32 basándose en la tabla de distribución de terceros de la FIFA 2026, requiriendo confirmación del admin. | PRD-US-034 | Could Have |
+| PRD-REQ-066 | La tabla `teams` debe incluir un campo `code` (texto, 3 letras, ej. "MEX", "ARG") con el código FIFA oficial de cada equipo. El seed debe poblarlo para los 48 equipos del Mundial 2026. | PRD-US-036 | Media |
+| PRD-REQ-067 | La prediction card debe mostrar `teams.code` junto a la bandera en la zona del score/inputs, en lugar del nombre completo, para evitar truncados en móvil. El nombre completo se sigue mostrando en vistas con mayor espacio (detalle de partido, tabla de grupos). | PRD-US-036 | Media |
+| PRD-REQ-068 | La hora del partido (para partidos programados) o el score (para partidos finalizados) deben ser el elemento visual central y dominante de la prediction card — fuente grande, centrada horizontalmente. | PRD-US-037 | Media |
+| PRD-REQ-069 | La prediction card debe mostrar la etiqueta de la etapa del partido ("Primera fase", "Octavos de Final", etc.) derivada del campo `matches.stage`. La fecha se omite de la tarjeta porque ya actúa como encabezado de sección del fixture. | PRD-US-037 | Media |
+| PRD-REQ-070 | En la zona del score/hora, los equipos se disponen simétricamente: `[código][bandera]` a la izquierda y `[bandera][código]` a la derecha. Los campos de ingreso de pronóstico reemplazan la hora cuando el partido está abierto. | PRD-US-037 | Media |
+| PRD-REQ-071 | El plazo de cierre ("Cierra: fecha") se muestra en la línea de metadatos secundaria dentro de la tarjeta, solo para partidos con estado "scheduled". | PRD-US-037 | Media |
+| PRD-REQ-072 | El schema de `matches` debe incluir `home_score_full` / `away_score_full` (integer, nullable) para almacenar el marcador al finalizar la prórroga en partidos eliminatorios. El campo `home_score`/`away_score` permanece como marcador a los 90 min (base para puntos). | PRD-US-038, BR-029 | Alta |
+| PRD-REQ-073 | El formulario de registro de resultado del admin debe solicitar, para partidos eliminatorios con marcadores iguales: (1) tipo de desempate (AET o Penales), (2) marcador al finalizar los 120 min, (3) equipo ganador (solo para penales — para AET se deduce del score). | PRD-US-038 | Alta |
+| PRD-REQ-074 | Tras registrar un resultado, el card del partido en el panel admin debe actualizarse automáticamente sin recargar la página. El `ResultForm` debe disparar `router.refresh()` vía callback `onSuccess`. | PRD-US-038, BUG-UC004-1 | Alta |
+| PRD-REQ-075 | Al presionar "Corregir resultado" en un partido con `status = 'finished'`, el sistema debe mostrar un diálogo de confirmación advirtiendo que se recalcularán los puntos de todos los participantes antes de proceder. | PRD-US-038, BUG-UC004-2 | Alta |
+| PRD-REQ-076 | El componente `AppLayout` debe incluir un `<Breadcrumb>` dinámico en el header, a la derecha del `<SidebarTrigger>`. El breadcrumb debe generarse a partir del `pathname` actual y el mapa de rutas definido en `UX_BLOCKS.md §5`. | PRD-US-039, BR-030 | Alta |
+| PRD-REQ-077 | El breadcrumb debe mostrar el nombre del partido (equipos) en rutas `/admin/fixture/[matchId]` y `/dashboard/matches/[matchId]`, consultando el match desde el Server Component del layout o pasándolo como prop desde la page. | PRD-US-039, BR-030 | Alta |
+| PRD-REQ-078 | La sección "Panel Admin" del sidebar debe implementarse con el componente `<Collapsible>` de shadcn/ui. El estado inicial (abierto/cerrado) se determina server-side comparando el `pathname` con el prefijo `/admin`. | PRD-US-040, BR-031 | Media |
+| PRD-REQ-079 | El ítem de fixture del panel admin en el sidebar debe usar el label "Partidos" (no "Fixture"). El ítem de configuración del footer debe usar el label "Mi Cuenta" (no "Settings"). | PRD-US-040, BR-032 | Media |
+| PRD-REQ-080 | La página `/login` debe usar el patrón de card centrado (shadcn/ui `login-01`): `<Card>` con título del torneo, campos email y contraseña, botón de submit. Sin links de registro, sin imágenes laterales. | PRD-US-041, BR-033 | Media |
+| PRD-REQ-081 | La página `/admin` debe mostrar 4 stat cards en grid de 2×2 (desktop) o 1×4 (mobile): Participantes (pagados / pendientes), Partidos (jugados / sin resultado), Pronósticos (total), Pozo (Bs. total). Cada card debe ser clickeable y navegar a la sección correspondiente. | PRD-US-042, BR-034 | Media |
+| PRD-REQ-082 | Las queries de la página `/admin` (counts de participantes, partidos, predicciones, pozo) deben ejecutarse en paralelo con `Promise.all()` en el Server Component. | PRD-US-042, BR-034 | Media |
+| PRD-REQ-083 | La tabla de participantes (`/admin/participants`) debe implementar el patrón `data-table` de shadcn/ui con columnas: Avatar+Nombre, Email, Estado pago (badge), Campeón (bandera+código), Fecha inscripción, Menú de acciones (`⋮`). | PRD-US-043, BR-035 | Media |
+| PRD-REQ-084 | La tabla de participantes debe incluir: (a) filtro por estado de pago ("Todos" / "Pendientes"), (b) ordenamiento por nombre y estado de pago, (c) menú contextual por fila con acciones "Marcar como pagado/pendiente" y "Resetear contraseña". | PRD-US-043, BR-035 | Media |
+| PRD-REQ-085 | La página `/settings` debe organizar sus secciones en cards independientes: (1) Foto de perfil, (2) Contraseña, (3) Estado de inscripción (read-only). Cada card tiene su propio estado de loading y error. | PRD-US-044 | Baja |
+| PRD-REQ-086 | Los nuevos componentes shadcn necesarios para estos cambios deben instalarse vía CLI: `npx shadcn@latest add breadcrumb collapsible table`. | PRD-US-039..044 | Media |
+| PRD-REQ-087 | La zona del score/inputs de la prediction card debe implementarse con CSS Grid de 3 columnas (`grid-cols-[1fr_auto_1fr]`): columnas laterales (`1fr`) para código+bandera de cada equipo, columna central (`auto`) para la hora, score o inputs. El centrado del elemento central no debe depender de la longitud de los nombres de equipo. | PRD-US-045, BR-037 | Media |
+| PRD-REQ-088 | La función de formateo de `deadlineAtLabel` en `dashboard/page.tsx` debe incluir `hour12: false` en las opciones de `Intl.DateTimeFormat`, igual que `formatBOTTime`. El resultado debe ser "mié, 10 jun, 15:00" en lugar de "mié, 10 jun, 03:00 p. m.". | PRD-US-045, BR-038 | Media |
+| PRD-REQ-089 | La línea de metadatos de la prediction card para partidos en estado `scheduled` debe mostrar únicamente "Cierra: [fecha y hora BOT]". El horario del partido no debe repetirse en esta línea. | PRD-US-045, BR-039 | Media |
+| PRD-REQ-090 | La etiqueta de etapa del partido no debe renderizarse dentro del cuerpo de la prediction card para partidos de fase de grupos (el fixture agrupa estos partidos bajo un encabezado de sección con esa misma etiqueta). | PRD-US-045, BR-040 | Baja |
+| PRD-REQ-091 | El botón "Guardar pronóstico" de la prediction card debe renderizarse con `size="sm"`, alineado a la derecha del card, sin ocupar el ancho completo. | PRD-US-045, BR-041 | Media |
+| PRD-REQ-092 | La prediction card debe mostrar un indicador visual de pronóstico guardado (ej. ícono de check + texto "Guardado") cuando `savedHome` y `savedAway` tienen valores definidos. El indicador debe ser visible en el estado colapsado del card sin necesidad de expandirlo. | PRD-US-045, BR-042 | Media |
+| PRD-REQ-093 | El hero del card de fixture del admin debe usar CSS Grid de 3 columnas (`grid-cols-[1fr_auto_1fr]`) para centrar matemáticamente la hora/score — consistente con el card del participante (PRD-REQ-087). | PRD-US-046, BR-043 | Media |
+| PRD-REQ-094 | Los inputs de resultado del card del admin deben iniciar vacíos con `placeholder="—"`. El botón "Registrar resultado" debe estar deshabilitado hasta que ambos inputs tengan un valor numérico ≥ 0. | PRD-US-046, BR-044 | Alta |
+| PRD-REQ-095 | La sección de desempate (AET / Penales) debe implementarse como reveal condicional: solo se renderiza en el DOM cuando `matches.stage ≠ 'group'` Y los dos scores ingresados son iguales. Fuera de esta condición, la sección no existe. | PRD-US-046, BR-045 | Alta |
+| PRD-REQ-096 | La sección de desempate debe incluir: (a) selector binario AET / Penales, (b) dos inputs para el marcador final de los 120 min, (c) selector de equipo ganador visible únicamente cuando se selecciona "Penales" (para AET el ganador se deduce del score de 120 min). | PRD-US-046, BR-045 | Alta |
+| PRD-REQ-097 | La página `/dashboard/matches/[matchId]` debe consultar `homeScoreFull`, `awayScoreFull`, `extraTime` y `matchWinnerId` del partido. El score mostrado en el encabezado debe ser `homeScoreFull — awayScoreFull` cuando `extraTime IS NOT NULL`; de lo contrario, `homeScore — awayScore`. | PRD-US-047, BR-046 | Alta |
+| PRD-REQ-098 | La página `/admin/fixture/[matchId]` debe consultar y mostrar el mismo score corregido que PRD-REQ-097. El encabezado del admin debe ser consistente con el del participante. | PRD-US-047, BR-046 | Alta |
+| PRD-REQ-099 | Ambas páginas de detalle deben mostrar — debajo del score — el badge `(a.e.t.)` o `(pen.)` según corresponda, y la línea "Avanza: [nombre del equipo]" cuando `matchWinnerId IS NOT NULL`. El nombre del equipo ganador se resuelve comparando `matchWinnerId` con `homeTeamId` / `awayTeamId`. | PRD-US-047, BR-047 | Alta |
+| PRD-REQ-100 | La constante `STAGE_LABELS` en ambas páginas de detalle debe incluir la etapa `r32` (Dieciseisavos de Final) para que ninguna etapa muestre su slug técnico en la UI. La función `formatBOT` en ambas páginas debe incluir `hour12: false`. | PRD-US-047 | Alta |
+| PRD-REQ-101 | Todos los botones que disparan operaciones asíncronas (fetch o router.refresh) deben mostrar un spinner `Loader2` animado (`animate-spin`, tamaño `h-3.5 w-3.5`) junto al label durante el estado `loading/saving/resetting`. El botón debe estar `disabled` durante el mismo período. Aplica a: match-form, result-form, tournament-form, champion-form, new-participant-form, prediction-card, participants-table (reset contraseña). | PRD-US-048, BR-048 | Media |
+| PRD-REQ-102 | El formulario de nuevo participante (`/admin/participants`) debe deshabilitar todos sus inputs (`fullName`, `email`, `password`, `hasPaid` checkbox) mientras el POST `/api/admin/participants` está en vuelo. | PRD-US-048, BR-049 | Media |
+| PRD-REQ-103 | Los inputs de score de la prediction card (`/dashboard`) deben deshabilitarse y mostrar `opacity-50` mientras el POST `/api/predictions` está en vuelo, para evitar edición concurrente. | PRD-US-048, BR-049 | Media |
+| PRD-REQ-104 | El botón "Guardar" de `prediction-row` (`/admin/fixture/[matchId]`) debe mostrar spinner + `"Guardando…"` durante el POST — no el carácter `"…"`. Los inputs de score del row deben deshabilitarse con `opacity-50` durante el mismo período. El botón "Cancelar" también debe deshabilitarse. | PRD-US-048, BR-050 | Media |
+| PRD-REQ-105 | El `confirm()` nativo del navegador en `prediction-row` (para confirmar la sobreescritura de un pronóstico existente) debe reemplazarse por `AlertDialog` de shadcn/ui, con título "¿Reemplazar pronóstico?" y descripción que incluya el score actual del participante. | PRD-US-048, BR-051 | Media |
+| PRD-REQ-106 | El componente `FixtureRealtime` debe llamar `toast.info("Resultados actualizados", { duration: 2500 })` (sonner) cada vez que el suscriptor de Supabase Realtime recibe un evento `UPDATE` en la tabla `matches` y dispara `router.refresh()`. | PRD-US-048, BR-052 | Media |
+| PRD-REQ-107 | El listado de partidos del admin (`/admin/fixture`) debe usar `grid gap-3 sm:grid-cols-2`: 2 columnas en pantallas `sm`+ y 1 columna en mobile, consistente con el fixture del participante. El skeleton de carga debe reflejar la estructura real del card admin (hero row + meta line + divisor + área de formulario) con el mismo grid de 2 columnas. | PRD-US-049, BR-053 | Media |
+| PRD-REQ-108 | La página de login (`/app/login/page.tsx`) debe extraer un componente client `LoginForm` (`login-form.tsx`) que use `useFormStatus` de `react-dom` para detectar cuando el Server Action está en vuelo. | PRD-US-050, BR-054 | Media |
+| PRD-REQ-109 | Mientras el Server Action de login está en vuelo: el botón de submit debe mostrar un spinner `Loader2` y cambiar el label a "Iniciando sesión…" (deshabilitado); los inputs de email y contraseña deben estar deshabilitados. | PRD-US-050, BR-054, BR-048, BR-049 | Media |
+| PRD-REQ-110 | La tabla de posiciones (`/app/dashboard/standings/standings-table.tsx`) debe mostrar un avatar de 28px por fila de participante: foto (`avatarUrl`) si está disponible, o un círculo de iniciales (primera letra del nombre + primera del apellido, fondo zinc) si no. El endpoint `/api/standings/route.ts` debe incluir `avatarUrl` en el SELECT y en el GROUP BY. | PRD-US-051, BR-055, BR-014 | Media |
+| PRD-REQ-111 | La tabla de posiciones debe mostrar el badge de bandera del campeón elegido en el avatar de cada participante (10×14px, `h-2.5 w-3.5`), posicionado absolutamente en la esquina inferior derecha con ring blanco. Solo visible si el participante tiene campeón seleccionado. El API de standings debe hacer JOIN con `teams` (alias `champion_team`) y retornar `championFlagUrl` y `championTeamName`. | PRD-US-052, BR-056, BR-007 | Media |
+| PRD-REQ-112 | El componente `UserAvatar` debe aceptar props opcionales `championFlagUrl` y `championTeamName`. Cuando se proveen, envuelve el avatar en un `<span>` relativo y agrega el badge de bandera proporcional al tamaño del avatar (45% del diámetro). El helper `getLayoutUserData(userId)` en `src/lib/layout-data.ts` realiza dos queries en paralelo (user + participant JOIN tournament JOIN teams) y retorna los datos del usuario + `championFlagUrl`/`championTeamName`. Los 5 layouts (dashboard, admin, settings, reglas, profile/[userId]) usan este helper y propagan los datos vía `AppLayout → AppSidebar → UserAvatar`. | PRD-US-052, BR-056 | Media |
 
 ---
 

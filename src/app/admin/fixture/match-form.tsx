@@ -1,10 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const STAGE_OPTIONS = [
   { value: "group", label: "Fase de Grupos" },
@@ -15,9 +23,6 @@ const STAGE_OPTIONS = [
   { value: "third", label: "Tercer Puesto" },
   { value: "final", label: "Final" },
 ];
-
-const selectClass =
-  "h-9 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:border-zinc-600";
 
 export type Team = { id: string; name: string };
 
@@ -36,15 +41,15 @@ interface Props {
 
 export function MatchForm({ teams, matchId, initialValues, onSuccess, onCancel }: Props) {
   const isEdit = Boolean(matchId);
+  const [stage, setStage] = useState(initialValues?.stage ?? "group");
+  const [homeTeamId, setHomeTeamId] = useState(initialValues?.homeTeamId ?? "");
+  const [awayTeamId, setAwayTeamId] = useState(initialValues?.awayTeamId ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
-    const stage = (form.elements.namedItem("stage") as HTMLSelectElement).value;
-    const homeTeamId = (form.elements.namedItem("homeTeamId") as HTMLSelectElement).value || null;
-    const awayTeamId = (form.elements.namedItem("awayTeamId") as HTMLSelectElement).value || null;
     const scheduledInput = (form.elements.namedItem("scheduledAt") as HTMLInputElement).value;
 
     if (!stage || !scheduledInput) {
@@ -64,7 +69,12 @@ export function MatchForm({ teams, matchId, initialValues, onSuccess, onCancel }
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stage, homeTeamId, awayTeamId, scheduledAt }),
+      body: JSON.stringify({
+        stage,
+        homeTeamId: homeTeamId || null,
+        awayTeamId: awayTeamId || null,
+        scheduledAt,
+      }),
     });
 
     setLoading(false);
@@ -86,18 +96,17 @@ export function MatchForm({ teams, matchId, initialValues, onSuccess, onCancel }
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="stage">Fase</Label>
-          <select
-            id="stage"
-            name="stage"
-            required
-            defaultValue={initialValues?.stage ?? "group"}
-            className={selectClass}
-          >
-            {STAGE_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <Label>Fase</Label>
+          <Select value={stage} onValueChange={(v) => setStage(v ?? "group")}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAGE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-1.5">
@@ -112,33 +121,31 @@ export function MatchForm({ teams, matchId, initialValues, onSuccess, onCancel }
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="homeTeamId">Equipo local</Label>
-          <select
-            id="homeTeamId"
-            name="homeTeamId"
-            defaultValue={initialValues?.homeTeamId ?? ""}
-            className={selectClass}
-          >
-            <option value="">Por definir</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+          <Label>Equipo local</Label>
+          <Select value={homeTeamId} onValueChange={(v) => setHomeTeamId(v ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Por definir" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="awayTeamId">Equipo visitante</Label>
-          <select
-            id="awayTeamId"
-            name="awayTeamId"
-            defaultValue={initialValues?.awayTeamId ?? ""}
-            className={selectClass}
-          >
-            <option value="">Por definir</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+          <Label>Equipo visitante</Label>
+          <Select value={awayTeamId} onValueChange={(v) => setAwayTeamId(v ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Por definir" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -150,6 +157,7 @@ export function MatchForm({ teams, matchId, initialValues, onSuccess, onCancel }
 
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={loading}>
+          {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
           {loading ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear partido"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onCancel}>

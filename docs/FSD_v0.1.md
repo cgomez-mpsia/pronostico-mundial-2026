@@ -7,7 +7,7 @@
 |---|---|
 | **Proyecto** | Pronóstico Mundial 2026 |
 | **Documento** | Functional Specification Document (FSD) |
-| **Versión** | 0.4 |
+| **Versión** | 1.4 |
 | **Estado** | En desarrollo — v1 en producción |
 | **Fecha** | 2026-05-17 |
 | **Autor** | Alberto Gomez |
@@ -22,6 +22,15 @@
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | 0.1 | 2026-05-15 | Alberto Gomez | Documento inicial — borrador completo |
+| 1.4 | 2026-05-17 | Alberto Gomez | Admin fixture 2-col grid + skeleton actualizado. Login loading state via useFormStatus (LoginForm client component). Avatar + initials fallback en standings. Champion flag badge en UserAvatar (standings + sidebar). getLayoutUserData helper compartido. BR-053..056. PRD-REQ-107..112. |
+| 1.3 | 2026-05-17 | Alberto Gomez | UX loading states: spinner Loader2 en todos los botones async (match-form, result-form, tournament-form, champion-form, new-participant-form, prediction-card, participants-table). Inputs deshabilitados durante submit en new-participant-form y prediction-card. prediction-row reescrito: label "Guardando…"+spinner, inputs bloqueados, confirm()→AlertDialog. FixtureRealtime: toast "Resultados actualizados" en router.refresh(). BR-048..052. PRD-REQ-101..106. |
+| 1.2 | 2026-05-17 | Alberto Gomez | Todos los dialogs nativos (confirm, prompt, alert) reemplazados por AlertDialog/Dialog de shadcn/ui. Todos los <select> nativos reemplazados por Select controlado de shadcn/ui. Eliminados reset-password-button.tsx y toggle-payment-button.tsx (obsoletos). BR-048..052 documentados. PRD-REQ-097..100. |
+| 1.1 | 2026-05-17 | Alberto Gomez | FSD-UC-018 actualizado: score real para AET/PEN (homeScoreFull/awayScoreFull), badge de resolución y equipo que avanza en ambas páginas de detalle (participante + admin). Bugs corregidos: `r32` añadido a STAGE_LABELS, `hour12: false` en formatBOT de ambas páginas. BR-046..047 referenciados. PRD-REQ-097..100. |
+| 1.1 | 2026-05-17 | Alberto Gomez | Decisión del cliente Opción A confirmada: BR-011 y UC-004-A8 actualizados (tiempo de descuento incluido en 90 min, un único score). FSD-UC-004 actualizado: BUG-UC004-4 (inputs default "0"), sección "Diseño visual del card (admin fixture)" con estados, CSS Grid hero, reveal condicional AET/PEN. BR-043..045 referenciados. PRD-REQ-093..096. |
+| 1.0 | 2026-05-17 | Alberto Gomez | FSD-UC-002 actualizado: análisis UX de prediction card — 5 bugs documentados (BUG-UC002-1..5): score no centrado (CSS Grid fix), deadline en 12h (hour12: false), meta-line redundante, botón full-width, sin indicador de guardado. Estructura de componente propuesta incluida. BR-037..042 referenciados. PRD-REQ-087..092. |
+| 0.9 | 2026-05-17 | Alberto Gomez | Análisis UX global de la app (docs/UX_BLOCKS.md). FSD-UC-015 actualizado: breadcrumbs dinámicos en header, sección Admin colapsable (sidebar-07), labels sin duplicados (Partidos / Mi Cuenta), mapa completo breadcrumb→ruta. FSD-UC-019 actualizado: stat cards en grid dashboard-01, cards clickeables. FSD-UC-022 nuevo: data-table de participantes con filtro/sort/menú contextual. IN-19 actualizado, IN-26..28 nuevos. BR-030..035 referenciados. |
+| 0.8 | 2026-05-17 | Alberto Gomez | Análisis UX de resultado de partido (sesión 17-May). BR-011 actualizado: tiempo de descuento incluido en "90 min reglamentarios" con decisión pendiente del cliente sobre goles en descuento. BR-029 nuevo: multi-score en eliminatorias (90 min vs. AET) — requiere `home_score_full`/`away_score_full`. UC-004 actualizado: flujos adicionales para tiempo de descuento y AET con goles, bugs de UX documentados (falta refresh tras submit, falta confirmación en corrección, alert() nativo). |
+| 0.7 | 2026-05-17 | Alberto Gomez | BR-027 y BR-028 implementados. `teams.code` añadido al schema (migración `0004_wise_marauders.sql`). 48 equipos sembrados con códigos FIFA. `prediction-card.tsx` rediseñado: hora/score como hero central, `[código][bandera]` simétrico, etapa dentro de la tarjeta, horario del partido visible en línea de metadatos cuando el pronóstico está abierto. `dashboard/page.tsx` actualizado con `homeTeamCode`, `awayTeamCode`, `stageLabel` y `scheduledTimeLabel`. Script `scripts/seed-teams.ts` eliminado (obsoleto). |
 | 0.5 | 2026-05-17 | Alberto Gomez | `db:setup` auto-inscribe al admin como participante (`hasPaid = true`) al crear el torneo. Decisión técnica: evita inscripción manual posterior; el admin queda listo para pronosticar desde el primer arranque. |
 | 0.4 | 2026-05-17 | Alberto Gomez | Nuevos FSD-UC-020 (tabla de clasificación de grupos) y FSD-UC-021 (fixture con banderas y agrupación por jornada). FSD-UC-004 actualizado: registro de tiempo extra y penales en eliminatorias (campos `extra_time` + `match_winner_id` en schema). Glosario y trazabilidad actualizados. |
 | 0.3 | 2026-05-17 | Alberto Gomez | Seed de los 104 partidos del Mundial 2026 implementado (`src/db/seed-matches.ts`). Nueva etapa `r32` (Dieciseisavos de Final) añadida al schema, CHECK constraint actualizado, STAGE_LABELS/STAGE_ORDER/STAGE_OPTIONS actualizados en todos los componentes. Migración `drizzle/0002_fat_sauron.sql` generada. Setup completo (`db:setup`) ahora incluye los 104 partidos automáticamente. |
@@ -80,13 +89,20 @@ Los participantes pagan una cuota de inscripción de Bs. 500 y compiten pronosti
 | IN-16 | Perfil público de participante con estadísticas calculadas (% resultados, % exactos, racha) |
 | IN-17 | Perfil privado: estado de pago, brecha con el líder, cambio de contraseña |
 | IN-18 | Página de reglas del torneo: contenido estático accesible desde navbar para todos los usuarios autenticados |
-| IN-19 | Sidebar de navegación (shadcn/ui): reemplaza el top navbar; avatar + nombre en header; sección Admin condicional |
+| IN-19 | Sidebar de navegación (shadcn/ui `sidebar-10`): header con breadcrumbs dinámicos + SidebarTrigger; avatar + nombre en sidebar; sección Admin colapsable (sidebar-07) visible solo para role=admin; labels sin duplicados ("Partidos" para admin fixture, "Mi Cuenta" para footer settings) |
 | IN-20 | Componente UserAvatar reutilizable: foto o iniciales CSS, 4 tamaños según contexto |
-| IN-21 | Página /settings: foto de perfil, contraseña, estado de pago (read-only) |
+| IN-21 | Página /settings: layout de cards por sección — Foto de perfil, Contraseña, Estado de inscripción (read-only) |
 | IN-22 | Página /admin/settings: nombre del torneo, estado, aplicación de puntos de campeón |
 | IN-23 | Página de detalle de partido: contador pre-deadline, tabla de pronósticos y puntos post-deadline |
 | IN-24 | Sistema global de toasts (shadcn/ui Sonner) para confirmaciones de todas las acciones |
 | IN-25 | Empty states contextuales en todas las secciones principales |
+| IN-26 | Breadcrumbs dinámicos en el header de todas las páginas autenticadas (componente `AppBreadcrumb`, shadcn/ui `<Breadcrumb>`) |
+| IN-27 | Admin home (`/admin`) con stat cards en grid 2×2: Participantes, Partidos, Pronósticos, Pozo — patrón dashboard-01 |
+| IN-28 | Tabla de participantes admin con data-table: filtro por pago pendiente, ordenamiento, menú contextual por fila |
+| IN-29 | Admin fixture — grid 2 columnas (`sm:grid-cols-2`) consistente con el fixture del participante. Skeleton actualizado para reflejar la estructura real del card admin (hero row + meta line + divisor + área del formulario de resultado) con el mismo layout de 2 columnas |
+| IN-30 | Login page loading state — componente client `LoginForm` con `useFormStatus` de `react-dom`. Spinner + label "Iniciando sesión…" + inputs deshabilitados mientras el Server Action está en vuelo |
+| IN-31 | Standings table — avatar de 28px por fila: foto (`avatarUrl`) o círculo de iniciales (primera letra nombre + primera letra apellido, fondo zinc). `/api/standings` incluye `avatarUrl` en SELECT + GROUP BY |
+| IN-32 | Champion flag badge en avatar — standings (10×14px, `h-2.5 w-3.5`) y sidebar (45% del diámetro del avatar). Badge posicionado bottom-right con ring blanco. Visible solo si el participante tiene campeón seleccionado. `getLayoutUserData(userId)` helper compartido en `src/lib/layout-data.ts` (dos queries en paralelo: user + participant JOIN tournament JOIN teams). Los 5 layouts (dashboard, admin, settings, reglas, profile/[userId]) usan el helper y propagan `championFlagUrl`/`championTeamName` vía `AppLayout → AppSidebar → UserAvatar` |
 
 ### 2.2 Fuera del Alcance
 
@@ -299,7 +315,68 @@ Feature: Ingresar pronóstico
     And el formulario de edición se desactiva para ese partido
 ```
 
-**Referencias:** PRD-REQ-005, PRD-REQ-006, PRD-REQ-007, BR-003, BR-004, BR-005, NFR-003
+**Mejoras UX identificadas en la prediction card (análisis 17-May-2026):**
+
+| # | ID | Descripción | Impacto | Solución |
+|---|---|---|---|---|
+| 1 | BUG-UC002-1 | Score no centrado matemáticamente — `flex justify-center` se desplaza con nombres de equipo asimétricos | En equipos como "Bosnia y Herzegovina" vs "Canadá", el score se corre hacia el lado más corto | Reemplazar el layout del hero por CSS Grid `grid-cols-[1fr_auto_1fr]`: laterales para código+bandera, centro para hora/score/inputs |
+| 2 | BUG-UC002-2 | `deadlineAtLabel` en formato 12h — `formatBOT` no establece `hour12: false` | Muestra "03:00 p. m." en lugar de "15:00" — inconsistente con el horario del partido (que sí usa 24h) | Agregar `hour12: false` a la llamada de `formatBOT` / `Intl.DateTimeFormat` en `dashboard/page.tsx` |
+| 3 | BUG-UC002-3 | Meta-line redundante — repite el horario del partido (ya es el hero visual) y la etiqueta de etapa (ya es el encabezado de sección) | Ruido cognitivo: "Grupo A · 15:00 · Cierra: mié, 10 jun, 03:00 p. m." contiene dos redundancias y un bug de formato | Simplificar meta-line a solo "Cierra: mié, 10 jun, 15:00"; eliminar horario y etiqueta de etapa del cuerpo del card |
+| 4 | BUG-UC002-4 | Botón "Guardar pronóstico" full-width de fondo sólido | A escala de 104 cards, el botón satura visualmente la página y compite con CTAs de navegación | Usar `size="sm"` alineado a la derecha, sin ancho completo |
+| 5 | BUG-UC002-5 | Sin indicador de pronóstico guardado en el card cerrado | El participante no puede saber de un vistazo qué partidos ya tienen pronóstico — debe expandir cada card | Mostrar ícono de check o badge "Guardado" cuando `savedHome != null && savedAway != null`, visible en el card colapsado |
+
+**Estructura de componente actualizada (`prediction-card.tsx`):**
+
+```tsx
+// Hero zone — CSS Grid 3 columnas garantiza centrado matemático
+<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+  {/* Columna izquierda: equipo local */}
+  <div className="flex items-center justify-end gap-1.5">
+    <span className="text-xs font-mono">{homeCode}</span>
+    <img src={homeFlagUrl} className="h-5 w-7 object-cover" />
+  </div>
+
+  {/* Columna central: hora / score / inputs */}
+  <div className="flex items-center gap-2">
+    {isOpen ? (
+      /* inputs de pronóstico */
+    ) : (
+      /* hora o score */
+    )}
+  </div>
+
+  {/* Columna derecha: equipo visitante */}
+  <div className="flex items-center justify-start gap-1.5">
+    <img src={awayFlagUrl} className="h-5 w-7 object-cover" />
+    <span className="text-xs font-mono">{awayCode}</span>
+  </div>
+</div>
+
+{/* Indicador de pronóstico guardado — visible en card cerrado */}
+{savedHome != null && savedAway != null && !isDeadlinePassed && (
+  <span className="text-xs text-green-600 flex items-center gap-1">
+    <CheckIcon className="h-3 w-3" /> Guardado
+  </span>
+)}
+
+{/* Meta-line simplificada — solo plazo de cierre */}
+{isOpen && (
+  <p className="text-xs text-zinc-500">Cierra: {deadlineAtLabel}</p>
+)}
+
+{/* Botón compacto, alineado a la derecha */}
+{isOpen && (
+  <div className="flex justify-end">
+    <Button size="sm" disabled={isPending}>
+      {isPending ? <Spinner /> : "Guardar pronóstico"}
+    </Button>
+  </div>
+)}
+```
+
+**Nota sobre `deadlineAtLabel`:** El bug BUG-UC002-2 se corrige en `dashboard/page.tsx` agregando `hour12: false` a la función de formateo del deadline, no en el componente `prediction-card.tsx`.
+
+**Referencias:** PRD-REQ-005, PRD-REQ-006, PRD-REQ-007, PRD-REQ-087, PRD-REQ-088, PRD-REQ-089, PRD-REQ-090, PRD-REQ-091, PRD-REQ-092, BR-003, BR-004, BR-005, BR-037, BR-038, BR-039, BR-040, BR-041, BR-042, NFR-003
 
 ---
 
@@ -368,38 +445,43 @@ Feature: Tabla de posiciones en tiempo real
 
 ### FSD-UC-004 — Admin Registra Resultado y Dispara Cálculo de Puntos
 
-**Descripción:** El admin ingresa el marcador oficial de un partido terminado (solo 90 minutos reglamentarios) y el sistema calcula automáticamente los puntos para todos los participantes. Para partidos eliminatorios que se decidan más allá de los 90 minutos, el admin también registra si fue tiempo extra o penales y el equipo ganador.
+**Descripción:** El admin ingresa el marcador oficial de un partido terminado (solo 90 minutos reglamentarios + tiempo de descuento) y el sistema calcula automáticamente los puntos para todos los participantes. Para partidos eliminatorios que se resuelvan más allá de los 90 minutos, el admin también registra si fue tiempo extra (AET) o penales, el marcador al final de los 120 minutos y el equipo ganador.
 
 **Actor primario:** Admin
 
 **Precondiciones:**
 - El admin está autenticado con rol `admin`.
 - El partido tiene estado `scheduled` o `live`.
-- El partido ha concluido sus 90 minutos reglamentarios.
+- El partido ha concluido sus 90 minutos reglamentarios (incluyendo tiempo de descuento).
 
 **Postcondiciones:**
-- El partido actualiza su estado a `finished` con `home_score`, `away_score`, y opcionalmente `extra_time` y `match_winner_id`.
+- El partido actualiza su estado a `finished` con `home_score`, `away_score` (marcador a 90 min), y opcionalmente `home_score_full`/`away_score_full` (marcador al final de la prórroga), `extra_time` y `match_winner_id`.
 - Para cada participante inscrito en el torneo, se crea o actualiza un registro en `match_points` con `result_points` y `exact_points` calculados (siempre basado en `home_score`/`away_score` de 90 min).
 - La tabla de posiciones se actualiza automáticamente vía Realtime.
+- El card del partido en el panel admin refleja el nuevo resultado sin necesidad de recargar la página.
 
 **Flujo Principal:**
 
 1. El admin navega al panel de administración → sección "Fixture".
-2. El admin selecciona el partido terminado.
-3. El admin ingresa el marcador oficial a los **90 minutos**: goles equipo local y goles equipo visitante.
-4. **[Solo para partidos eliminatorios (stage ≠ `group`)]** Si los scores son iguales, el sistema muestra un paso adicional: "¿Cómo se decidió el partido?" con opciones `[Tiempo extra | Penales]` + selector del equipo ganador. Si los scores son distintos, este paso no aparece.
-5. El admin presiona "Registrar resultado y calcular puntos".
-6. El sistema actualiza el partido: `status = 'finished'`, `home_score`, `away_score`. Si aplica: `extra_time = 'aet'|'pen'`, `match_winner_id`.
-7. El sistema recupera todas las predicciones de ese partido.
-8. Para los participantes sin predicción, el sistema usa internamente `home_score = 0, away_score = 0, is_manually_entered = false`.
-9. El sistema ejecuta el motor de puntos (`lib/points.ts`) para cada predicción — **siempre sobre el marcador de 90 min, nunca sobre el resultado de tiempo extra o penales:**
-   - Determina el resultado real (local gana / empate / visitante gana).
-   - Determina el resultado pronosticado.
-   - Si coincide el resultado: `result_points = 1`.
-   - Si coincide el score exacto Y `is_manually_entered = true`: `exact_points = 2`.
-   - `total_points = result_points + exact_points`.
-10. El sistema inserta/actualiza registros en `match_points` para cada participante.
-11. El sistema confirma la operación al admin: "Resultado registrado. Puntos calculados para N participantes."
+2. El admin localiza el partido terminado en el card del fixture.
+3. El admin ingresa el **marcador a los 90 minutos** (incluyendo tiempo de descuento): goles equipo local y goles equipo visitante.
+4. **[Solo partidos eliminatorios (stage ≠ `group`)] Si los scores de 90 min son iguales:** el sistema muestra paso adicional: "¿Cómo se decidió el partido?" con opciones `[Tiempo extra | Penales]`.
+   - Si el admin elige **Tiempo extra (AET):** aparecen dos inputs para el marcador al final de la prórroga (120 min). El ganador se deduce automáticamente del marcador de prórroga.
+   - Si el admin elige **Penales:** aparecen dos inputs para el marcador al final de los 120 min (puede ser igual al de 90 min si no hubo goles en prórroga, o diferente si hubo). Luego aparece el selector del equipo ganador en penales.
+5. El admin presiona "Registrar resultado".
+6. Si el partido **ya tiene resultado registrado** (`status = 'finished'`): el sistema muestra un diálogo de confirmación: "Este partido ya tiene resultado. ¿Recalcular puntos para todos los participantes?" El admin debe confirmar antes de continuar.
+7. El sistema actualiza el partido en una transacción: `status = 'finished'`, `home_score`, `away_score`. Si aplica: `home_score_full`, `away_score_full`, `extra_time = 'aet'|'pen'`, `match_winner_id`.
+8. El sistema recupera todas las predicciones de ese partido.
+9. Para los participantes sin predicción, el sistema usa internamente `home_score = 0, away_score = 0, is_manually_entered = false`.
+10. El sistema ejecuta el motor de puntos (`lib/points.ts`) para cada predicción — **siempre sobre `home_score`/`away_score` (90 min), nunca sobre `home_score_full`/`away_score_full` ni sobre penales:**
+    - Determina el resultado real (local gana / empate / visitante gana) basado en `home_score`/`away_score`.
+    - Determina el resultado pronosticado.
+    - Si coincide el resultado: `result_points = 1`.
+    - Si coincide el score exacto Y `is_manually_entered = true`: `exact_points = 2`.
+    - `total_points = result_points + exact_points`.
+11. El sistema inserta/actualiza registros en `match_points` para cada participante.
+12. El sistema muestra un toast de confirmación: "Resultado registrado · N participantes calculados."
+13. El card del partido se actualiza automáticamente mostrando el nuevo marcador (sin recarga de página).
 
 **Flujos Alternativos:**
 
@@ -407,11 +489,107 @@ Feature: Tabla de posiciones en tiempo real
 |---|---|---|
 | UC004-A1 | El partido termina 0-0 y un participante no pronosticó | `result_points = 1` (empate acertado), `exact_points = 0` (no ingresó manualmente). Total: 1 punto. |
 | UC004-A2 | El partido termina 0-0 y un participante pronosticó 0-0 manualmente | `result_points = 1`, `exact_points = 2`. Total: 3 puntos. |
-| UC004-A3 | El admin ingresa un resultado incorrecto | El admin puede corregir el resultado. El sistema recalcula y sobreescribe `match_points`. |
-| UC004-A4 | Error en el cálculo (excepción) | El sistema registra el error en logs, revierte la transacción y muestra mensaje de error al admin. |
-| UC004-A5 | Admin envía el formulario con un solo score o sin scores | Client-side: el botón "Registrar resultado" permanece deshabilitado hasta que ambos campos tienen valor. Server-side: el Route Handler valida que ambos valores sean enteros ≥ 0; si no, retorna HTTP 400 con mensaje "Ambos scores son requeridos." |
-| UC004-A6 | Partido eliminatorio termina con scores iguales pero admin no selecciona desempate | Client-side: el botón permanece deshabilitado hasta completar el campo de desempate. |
-| UC004-A7 | Partido eliminatorio con scores distintos (ganador claro en 90 min) | No aparece el paso de desempate. `extra_time = null`, `match_winner_id = null`. El ganador es evidente por el marcador. |
+| UC004-A3 | El admin ingresa un resultado incorrecto | El admin puede corregir el resultado. Debe confirmar en el diálogo de corrección. El sistema recalcula y sobreescribe `match_points`. El card se actualiza tras la corrección. |
+| UC004-A4 | Error en el cálculo (excepción) | El sistema revierte la transacción completa. Muestra toast de error. No se modifica ni el partido ni los puntos. |
+| UC004-A5 | Admin envía el formulario con un solo score o sin scores | Client-side: el botón permanece deshabilitado. Server-side: valida enteros ≥ 0; si no, HTTP 400. |
+| UC004-A6 | Partido eliminatorio con 90-min igualados pero admin no completa el desempate | Client-side: el botón permanece deshabilitado hasta completar tipo de desempate y ganador. |
+| UC004-A7 | Partido eliminatorio con scores distintos en 90 min (ganador claro) | No aparece el paso de desempate. `extra_time = null`, `match_winner_id = null`, `home_score_full`/`away_score_full` = null. |
+| UC004-A8 | ✅ Gol en tiempo de descuento (ej. 1-2 al min 90, 2-2 al min 90+3) | **Opción A confirmada por el cliente (17-May-2026):** el admin ingresa el marcador al pitido final (2-2). Este marcador incluye los goles en descuento y es el oficial para pronósticos. La persona que pronosticó 1-2 recibe 0 puntos; quien pronosticó 2-2 recibe 3 puntos. El admin ingresa un único score — no es necesario distinguir "minuto 90 exacto" del "pitido final". |
+| UC004-A9 | Partido eliminatorio en prórroga con goles en la prórroga (AET) | El admin ingresa: marcador 90 min (ej. 1-1) + marcador 120 min (ej. 2-1). El ganador se deduce del marcador de 120 min. La UI muestra "2-1 (a.e.t.)". Los puntos se calculan sobre 1-1. |
+| UC004-A10 | Partido eliminatorio en prórroga con goles pero finalmente penales | El admin ingresa: marcador 90 min (ej. 1-1) + marcador 120 min (ej. 2-2) + selecciona ganador en penales. La UI muestra "2-2 (pen.)". Los puntos se calculan sobre 1-1. |
+
+**Campos pendientes de schema (BR-029):**
+
+```sql
+-- Campos a agregar en la tabla matches para soporte completo de multi-score:
+home_score_full  integer  -- marcador al final de los 120 min (null si no hubo prórroga)
+away_score_full  integer  -- marcador al final de los 120 min (null si no hubo prórroga)
+-- Relación: home_score / away_score = 90 min (para puntos)
+--           home_score_full / away_score_full = 120 min (para display)
+-- Si extra_time IS NULL: home_score_full = home_score (no se almacena por separado)
+-- Si extra_time = 'aet' o 'pen': home_score_full puede diferir de home_score
+```
+
+**Bugs de UX conocidos (pendientes de corrección):**
+
+| # | Descripción | Impacto | Solución |
+|---|---|---|---|
+| BUG-UC004-1 | El hero del card no se actualiza tras registrar resultado — `ResultForm` no llama `router.refresh()` | El admin ve el marcador viejo en el card hasta recargar manualmente la página | Agregar callback `onSuccess` a `ResultForm` que dispare `router.refresh()` en `fixture-client.tsx` |
+| BUG-UC004-2 | Sin confirmación al corregir un resultado ya registrado | El admin puede recalcular todos los puntos del torneo accidentalmente | Mostrar dialog de confirmación antes del submit cuando `isFinished = true` |
+| BUG-UC004-3 | El feedback de éxito usa `window.alert()` nativo | Bloquea el hilo, inconsistente con el resto de la UI | Reemplazar por toast de shadcn/ui Sonner |
+| BUG-UC004-4 | Los inputs de resultado se inicializan con el valor `0` | Ambigüedad: el admin no distingue entre "aún no ingresé nada" y "el resultado fue 0-0" | Inicializar inputs vacíos (`value=""`) con `placeholder="—"`; deshabilitar el botón hasta que ambos tengan valor numérico ≥ 0 |
+
+**Diseño visual del card de fixture (admin):**
+
+El card de resultado del admin tiene tres estados visuales:
+
+```
+Estado 1 — scheduled (inputs vacíos, botón deshabilitado)
+┌──────────────────────────────────────────────────────────────────┐
+│  MEX 🇲🇽           15:00           🇿🇦 SUD                     │
+│  Fase de Grupos · jue, 11 jun                                    │
+├──────────────────────────────────────────────────────────────────┤
+│  [ — ]  —  [ — ]               [Registrar resultado]  (dim)    │
+└──────────────────────────────────────────────────────────────────┘
+
+Estado 2a — scheduled, eliminatoria, scores iguales → reveal condicional
+┌──────────────────────────────────────────────────────────────────┐
+│  ESP 🇪🇸           22:00           🇩🇪 GER                     │
+│  Octavos de Final · sáb, 28 jun                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Resultado 90 min: [ 1 ]  —  [ 1 ]                              │
+│  ┌─ Empate al pitido — ¿cómo se resolvió? ───────────────────┐  │
+│  │  ○ Tiempo extra (a.e.t.)   ● Penales                      │  │
+│  │  Resultado 120 min: [ 1 ]  —  [ 1 ]                       │  │
+│  │  Ganador en penales: [ España ▼ ]                         │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                              [Registrar resultado →]              │
+└──────────────────────────────────────────────────────────────────┘
+
+Estado 3 — finished
+┌──────────────────────────────────────────────────────────────────┐
+│  MEX 🇲🇽            2  —  1            🇿🇦 SUD                  │
+│  Fase de Grupos · jue, 11 jun                    ✓ Finalizado   │
+├──────────────────────────────────────────────────────────────────┤
+│  [Corregir resultado]   ← variant=outline, dispara dialog        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Lógica del reveal condicional (AET/PEN):**
+
+```tsx
+const isKnockout = !["group"].includes(match.stage);
+const isDrawAt90 =
+  homeScore !== "" && awayScore !== "" &&
+  Number(homeScore) === Number(awayScore);
+
+const showExtraTimeSection = isKnockout && isDrawAt90;
+```
+
+La sección extra se monta/desmonta en el DOM según `showExtraTimeSection`. No es un hide/show con CSS — se renderiza condicionalmente para evitar estado residual en los inputs de 120 min.
+
+**Hero zone — CSS Grid (mismo patrón que prediction-card.tsx, BR-043):**
+
+```tsx
+<div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+  {/* Izquierda: equipo local */}
+  <div className="flex items-center justify-end gap-2">
+    <span className="text-sm font-semibold">{homeTeamName}</span>
+    <img src={homeTeamFlagUrl} className="h-5 w-7 object-cover" />
+  </div>
+
+  {/* Centro: hora o score */}
+  <div className="text-2xl font-bold tabular-nums">
+    {isFinished ? `${homeScore} — ${awayScore}` : scheduledTime}
+  </div>
+
+  {/* Derecha: equipo visitante */}
+  <div className="flex items-center justify-start gap-2">
+    <img src={awayTeamFlagUrl} className="h-5 w-7 object-cover" />
+    <span className="text-sm font-semibold">{awayTeamName}</span>
+  </div>
+</div>
+```
 
 **Criterios de Aceptación (Gherkin):**
 
@@ -424,6 +602,7 @@ Feature: Registro de resultado y cálculo de puntos
     When el admin registra el resultado 2-1
     Then Juan recibe result_points = 1 y exact_points = 2
     And match_points.total_points para Juan en ese partido es 3
+    And el card del partido muestra "2 — 1" sin necesidad de recargar
 
   Scenario: Resultado acertado pero score incorrecto
     Given el partido España vs Alemania terminó 2-1
@@ -438,40 +617,45 @@ Feature: Registro de resultado y cálculo de puntos
     When el admin registra el resultado 0-0
     Then el sistema usa 0-0 con is_manually_entered = false para Pedro
     And Pedro recibe result_points = 1 y exact_points = 0
-    And match_points.total_points para Pedro es 1
-
-  Scenario: Pronóstico no ingresado, partido no termina 0-0
-    Given el partido Francia vs Polonia terminó 1-0
-    And el participante Ana no ingresó pronóstico
-    When el admin registra el resultado 1-0
-    Then el sistema usa 0-0 con is_manually_entered = false para Ana
-    And Ana recibe result_points = 0 y exact_points = 0
-    And match_points.total_points para Ana es 0
 
   Scenario: Corrección de resultado ya registrado
-    Given el admin registró erróneamente el resultado 2-0 para un partido
-    When el admin corrige el resultado a 1-0
-    Then el sistema recalcula match_points para todos los participantes del partido
-    And los nuevos valores sobreescriben los anteriores
+    Given el admin registró erróneamente el resultado 2-0 para un partido con status finished
+    When el admin cambia los inputs a 1-0 y presiona "Corregir resultado"
+    Then el sistema muestra un diálogo de confirmación antes de proceder
+    And al confirmar, recalcula match_points para todos los participantes
+    And el card muestra el nuevo marcador "1 — 0"
 
-  Scenario: Partido eliminatorio decidido en penales
-    Given el partido Argentina vs Francia es eliminatorio y terminó 1-1 en 90 minutos
+  Scenario: Partido eliminatorio decidido en penales (sin goles en prórroga)
+    Given el partido Argentina vs Francia terminó 1-1 en 90 min y 1-1 en 120 min
     And el participante Juan pronosticó 1-1
-    When el admin registra score 1-1, selecciona "Penales" y ganador "Argentina"
-    Then matches.extra_time = 'pen' y matches.match_winner_id = id de Argentina
-    And Juan recibe 3 puntos (1-1 acertado + score exacto) — los penales no afectan los puntos
-    And en la UI el partido muestra "1 - 1 (pen.)" con Argentina como ganador
+    When el admin registra: score 90 min = 1-1, score 120 min = 1-1, penales, ganador Argentina
+    Then matches.home_score = 1, matches.away_score = 1 (para puntos)
+    And matches.home_score_full = 1, matches.away_score_full = 1
+    And matches.extra_time = 'pen', matches.match_winner_id = id de Argentina
+    And Juan recibe 3 puntos (1-1 en 90 min acertado)
+    And en la UI el partido muestra "1 — 1 (pen.)" con Argentina como ganador
 
-  Scenario: Partido eliminatorio decidido en tiempo extra
-    Given el partido España vs Alemania es eliminatorio y terminó 1-1 en 90 minutos
-    And España marcó en el minuto 104 (2-1 en tiempo extra)
-    When el admin registra score 1-1 (90 min), selecciona "Tiempo extra" y ganador "España"
-    Then matches.extra_time = 'aet' y matches.match_winner_id = id de España
-    And en la UI el partido muestra "1 - 1 (a.e.t.)" con España como ganador
+  Scenario: Partido eliminatorio decidido en penales (con goles en prórroga)
+    Given el partido Brasil vs Croacia terminó 1-1 en 90 min y 2-2 en 120 min
+    And el participante Ana pronosticó 1-1
+    When el admin registra: score 90 min = 1-1, score 120 min = 2-2, penales, ganador Brasil
+    Then matches.home_score = 1, matches.away_score = 1 (para puntos)
+    And matches.home_score_full = 2, matches.away_score_full = 2
+    And Ana recibe 3 puntos (acertó 1-1 en 90 min)
+    And en la UI el partido muestra "2 — 2 (pen.)" con Brasil como ganador
+
+  Scenario: Partido eliminatorio decidido en tiempo extra (AET)
+    Given el partido España vs Alemania terminó 1-1 en 90 min
+    And España marcó en el minuto 104 (2-1 al final de la prórroga)
+    When el admin registra: score 90 min = 1-1, score 120 min = 2-1, tipo = AET
+    Then matches.home_score = 1, matches.away_score = 1 (para puntos)
+    And matches.home_score_full = 2, matches.away_score_full = 1
+    And matches.extra_time = 'aet', matches.match_winner_id = id de España
+    And en la UI el partido muestra "2 — 1 (a.e.t.)" con España como ganador
     And los puntos se calculan sobre 1-1, no sobre 2-1
 ```
 
-**Referencias:** PRD-REQ-008, PRD-REQ-009, PRD-REQ-010, PRD-REQ-058, PRD-REQ-063, PRD-REQ-064, BR-005, BR-006, BR-007, BR-023, NFR-001
+**Referencias:** PRD-REQ-008, PRD-REQ-009, PRD-REQ-010, PRD-REQ-058, PRD-REQ-063, PRD-REQ-064, PRD-REQ-093, PRD-REQ-094, PRD-REQ-095, PRD-REQ-096, BR-005, BR-006, BR-007, BR-011, BR-023, BR-029, BR-043, BR-044, BR-045, NFR-001
 
 ---
 
@@ -1301,9 +1485,9 @@ Feature: Página de reglas del torneo
 
 ---
 
-### FSD-UC-015 — Layout con Sidebar y Avatar
+### FSD-UC-015 — Layout con Sidebar, Breadcrumbs y Avatar
 
-**Descripción:** Define la estructura de navegación global de la app. El sidebar (shadcn/ui) reemplaza el top navbar, mostrando el avatar del usuario autenticado en su header y los ítems de navegación principales. El componente `UserAvatar` es reutilizable en todos los contextos donde aparece un avatar.
+**Descripción:** Define la estructura de navegación global de la app. El sidebar (shadcn/ui `sidebar-10`) incluye breadcrumbs dinámicos en el header y sección Admin colapsable (patrón `sidebar-07`). El componente `UserAvatar` es reutilizable en todos los contextos donde aparece un avatar.
 
 **Actor primario:** Participante, Admin (Sistema)
 
@@ -1311,37 +1495,74 @@ Feature: Página de reglas del torneo
 - El usuario está autenticado.
 
 **Postcondiciones:**
-- El usuario puede navegar entre secciones desde el sidebar en cualquier dispositivo.
+- El usuario puede navegar entre secciones y siempre sabe en qué sección está gracias a los breadcrumbs.
 
-**Estructura del Sidebar:**
+**Estructura del Layout (`app-layout.tsx`):**
 
 ```
-Header:   [Avatar 40px] [Nombre completo]
-─────────────────────────────────────
-Nav:      📋 Fixture
-          🏆 Tabla de Posiciones
-          ⭐ Mi Campeón
-          📖 Reglas
-          👤 Mi Perfil
-─────────────────────────────────────
-Admin:    📋 Fixture              ← /admin/fixture
-          👥 Participantes        ← /admin/participants  
-          💰 Distribución Pozo    ← /admin/prizes
-          ⚙️  Configuración        ← /admin/settings
-          (todo el bloque solo visible para role=admin)
-─────────────────────────────────────
-Footer:   ⚙  Settings
-          [Cerrar sesión]
+SidebarProvider
+  AppSidebar
+    [Header]  [Avatar 40px] [Nombre completo]
+    ─────────────────────────────────
+    [Nav]     📋 Fixture              → /dashboard
+              🏆 Tabla de Posiciones  → /dashboard/standings
+              ⭐ Mi Campeón           → /dashboard/champion
+              📖 Reglas               → /reglas
+              👤 Mi Perfil            → /profile/[userId]
+    ─────────────────────────────────
+    [Admin]   ▼ Admin  (colapsable — expande auto en /admin/*)
+                📋 Partidos           → /admin/fixture
+                👥 Participantes      → /admin/participants
+                💰 Distribución Pozo  → /admin/prizes
+                ⚙️  Configuración      → /admin/settings
+    ─────────────────────────────────
+    [Footer]  👤 Mi Cuenta            → /settings
+              [Cerrar sesión]
+  SidebarInset
+    <header>
+      [SidebarTrigger] | [Breadcrumb dinámico]
+    </header>
+    <main>{children}</main>
 ```
+
+**Breadcrumb dinámico — mapa de rutas:**
+
+| Ruta | Breadcrumbs mostrados |
+|---|---|
+| `/dashboard` | Fixture |
+| `/dashboard/standings` | Tabla de Posiciones |
+| `/dashboard/champion` | Mi Campeón |
+| `/dashboard/grupos` | Grupos |
+| `/dashboard/matches/[id]` | Fixture › [Local vs Visitante] |
+| `/admin` | Admin |
+| `/admin/fixture` | Admin › Partidos |
+| `/admin/fixture/[id]` | Admin › Partidos › [Local vs Visitante] |
+| `/admin/participants` | Admin › Participantes |
+| `/admin/prizes` | Admin › Distribución del Pozo |
+| `/admin/settings` | Admin › Configuración |
+| `/profile/[userId]` | Perfil |
+| `/settings` | Mi Cuenta |
+| `/reglas` | Reglas |
 
 **Flujo Principal:**
 
-1. El layout raíz autentica al usuario y obtiene `{ fullName, avatarUrl, role }` desde la tabla `users`.
-2. El Server Component pasa estas props al componente `AppSidebar`.
-3. En desktop: el sidebar es visible permanentemente, colapsable a íconos.
-4. En mobile: el sidebar se oculta; un botón hamburger abre un `Sheet` (drawer lateral).
-5. La sección "Panel Admin" solo se renderiza si `role === 'admin'` (verificado server-side).
-6. El footer del sidebar contiene el link a `/settings` y el botón de cerrar sesión.
+1. El layout raíz autentica al usuario y obtiene `{ fullName, avatarUrl, role, userId }` desde la tabla `users`.
+2. El Server Component pasa estas props al componente `AppSidebar` y `AppBreadcrumb`.
+3. El `AppBreadcrumb` lee el `pathname` actual y genera los ítems del breadcrumb según el mapa de rutas.
+4. Para rutas con `[id]` dinámico (partido), el nombre se pasa desde el Server Component de la page (no del layout) — el breadcrumb acepta un prop `dynamicLabel?: string`.
+5. En desktop: el sidebar es visible permanentemente, colapsable a íconos.
+6. En mobile: el sidebar se oculta; el SidebarTrigger abre un `Sheet` (drawer lateral). El breadcrumb actúa como título de página.
+7. La sección "Panel Admin" solo se renderiza si `role === 'admin'` (verificado server-side). Su estado inicial (expandido/colapsado) se determina comparando `pathname.startsWith('/admin')`.
+8. El footer contiene "Mi Cuenta" → `/settings` y el botón de cerrar sesión.
+
+**Bugs corregidos respecto a implementación anterior:**
+
+| Bug | Descripción | Fix |
+|---|---|---|
+| P1 | Header vacío — solo `<SidebarTrigger>` | Agregar `<AppBreadcrumb>` al header |
+| P3 | Dos ítems "Fixture" con mismo ícono | Admin fixture → label "Partidos" |
+| P4 | Dos ítems con ícono de engranaje | Footer → label "Mi Cuenta" |
+| P5 | Sección Admin siempre visible/expandida | Usar `<Collapsible>` con estado inicial por pathname |
 
 **Componente `UserAvatar` — ubicaciones y tamaños:**
 
@@ -1354,12 +1575,13 @@ Footer:   ⚙  Settings
 | Settings `/settings` (preview) | 64px | Iniciales |
 
 **Decisiones técnicas:**
-- `components/app-sidebar.tsx`: Server Component wrapper que pasa datos al Sidebar de shadcn/ui.
-- `components/user-avatar.tsx`: componente reutilizable que recibe `avatarUrl?: string | null`, `fullName: string`, `size: number`. Renderiza `<img>` si hay URL, o un div con iniciales CSS si no hay.
+- `components/app-sidebar.tsx`: Client Component (necesita `usePathname` para activos y estado del Collapsible).
+- `components/app-breadcrumb.tsx`: nuevo componente Client que lee `usePathname()` y genera breadcrumbs.
+- `components/user-avatar.tsx`: sin cambios — recibe `avatarUrl`, `fullName`, `size`.
 - El `role` se lee en el layout Server Component y se pasa como prop — nunca se expone al cliente directamente.
-- Los layouts `app/dashboard/layout.tsx` y `app/admin/layout.tsx` se refactorizan para incluir el `AppSidebar`.
+- Nuevos componentes shadcn a instalar: `breadcrumb`, `collapsible`.
 
-**Referencias:** PRD-REQ-034, PRD-REQ-035, PRD-REQ-036, BR-019
+**Referencias:** PRD-REQ-034, PRD-REQ-035, PRD-REQ-036, PRD-REQ-076, PRD-REQ-077, PRD-REQ-078, PRD-REQ-079, BR-019, BR-030, BR-031, BR-032
 
 ---
 
@@ -1545,8 +1767,24 @@ Feature: Configuración del torneo por el admin
 
 ```
 Header del partido
-  [Bandera] Equipo Local  X — Y  Equipo Visitante [Bandera]
-  Etapa · Fecha · Estado (Programado / Finalizado)
+  Etapa (ej. "Octavos de Final")
+
+  [Equipo Local]     SCORE    [Equipo Visitante]
+                  (badge)
+              Avanza: [Equipo]         ← solo AET/PEN
+
+  Fecha y hora · Estado (Programado / Finalizado)
+
+Reglas de score en el header (BR-046):
+  - status != 'finished'         → "vs"
+  - status = 'finished'
+      extraTime IS NULL          → homeScore — awayScore
+      extraTime IS NOT NULL      → homeScoreFull — awayScoreFull
+
+Badge y ganador (BR-047):
+  - extraTime = 'aet'  → "(a.e.t.)"  + "Avanza: [nombre]"
+  - extraTime = 'pen'  → "(pen.)"    + "Avanza: [nombre]"
+  - extraTime IS NULL  → nada
 
 ─────────────────────────────────────────────────────
 ANTES del deadline:
@@ -1555,15 +1793,35 @@ ANTES del deadline:
 
 DESPUÉS del deadline (o partido finalizado):
   Tabla de pronósticos:
-  | Avatar | Participante | Pronóstico | Puntos |
-  |--------|-------------|------------|--------|
-  | [img]  | Juan Pérez  | 2 - 1      | +3     |
-  | [img]  | María López | 1 - 0      | +1     |
-  | [img]  | Carlos Soto | No pronosticó | 0   |
-  
+  | Participante | Pronóstico | Puntos |
+  |-------------|------------|--------|
+  | Juan Pérez  | 2 - 1      | +3     |
+  | María López | 1 - 0      | +1     |
+  | Carlos Soto | No pronosticó | 0   |
+
   Ordenado por: puntos obtenidos desc, luego nombre asc.
   Si el partido no tiene resultado aún: columna Puntos oculta.
 ```
+
+**Campos requeridos en la query del Server Component:**
+
+```ts
+// matches
+id, scheduledAt, deadlineAt, homeScore, awayScore,
+homeScoreFull, awayScoreFull,   // ← BR-046 / BR-029
+extraTime, matchWinnerId,       // ← BR-047 / BR-023
+homeTeamId, awayTeamId,         // ← para resolver winnerName
+status, stage, tournamentId,
+// via JOIN
+homeTeamName, awayTeamName
+```
+
+**Bugs corregidos en esta revisión (v1.2):**
+
+| Bug | Síntoma | Fix |
+|---|---|---|
+| `r32` faltaba en `STAGE_LABELS` | La UI mostraba el slug `"r32"` en lugar de "Dieciseisavos de Final" | Añadir `r32: "Dieciseisavos de Final"` a la constante local |
+| `formatBOT` sin `hour12: false` | Mostraba "3:00 p. m." en lugar de "15:00" | Añadir `hour12: false` a las opciones de `Intl.DateTimeFormat` en ambas páginas de detalle |
 
 **Flujo Principal:**
 
@@ -1581,18 +1839,34 @@ DESPUÉS del deadline (o partido finalizado):
 | UC018-A1 | Partido con equipos TBD (null) | Muestra "Por definir vs Por definir" en el header. Sin pronósticos posibles. |
 | UC018-A2 | `matchId` no existe | Retornar 404. |
 | UC018-A3 | Partido programado con deadline no pasado | Muestra solo el contador: "X de N participantes ya pronosticaron." |
+| UC018-A4 | Partido eliminatorio finalizado en AET | Score = `homeScoreFull — awayScoreFull`, badge `(a.e.t.)`, winner deducido del score. |
+| UC018-A5 | Partido eliminatorio finalizado en penales | Score = `homeScoreFull — awayScoreFull`, badge `(pen.)`, winner = `matchWinnerId`. |
 
 **Criterios de Aceptación (Gherkin):**
 
 ```gherkin
 Feature: Página de detalle de partido
 
-  Scenario: Partido finalizado con resultado
-    Given que "Argentina vs Francia" terminó 3-3 y hay 10 participantes
+  Scenario: Partido finalizado en 90 min
+    Given que "Argentina vs Francia" terminó 3-2 sin prórroga
     When hago clic en el partido desde el fixture
-    Then veo el resultado 3-3 en el header
-    And veo la tabla con los 10 participantes ordenados por puntos
-    And los que pronosticaron 3-3 muestran "+3 pts"
+    Then veo "3 — 2" en el header
+    And no veo ningún badge de resolución
+    And veo la tabla con los participantes ordenados por puntos
+
+  Scenario: Partido finalizado en AET
+    Given que "España vs Alemania" terminó 1-1 en 90 min y 2-1 en 120 min
+    When veo el detalle del partido
+    Then veo "2 — 1" en el header
+    And veo el badge "(a.e.t.)"
+    And veo "Avanza: España"
+
+  Scenario: Partido finalizado en penales
+    Given que "Brasil vs Croacia" terminó 1-1 en 120 min y Brasil ganó en penales
+    When veo el detalle del partido
+    Then veo "1 — 1" en el header
+    And veo el badge "(pen.)"
+    And veo "Avanza: Brasil"
 
   Scenario: Deadline pasado pero sin resultado aún
     Given que el deadline ya pasó pero el partido no tiene resultado
@@ -1616,8 +1890,10 @@ Feature: Página de detalle de partido
 - Server Component puro: todos los datos se obtienen en el servidor con un único query que hace JOIN de `matches`, `participants`, `predictions`, `match_points` y `users`.
 - El fixture existente (`/dashboard`) convierte cada `PredictionCard` en un link a `/dashboard/matches/[matchId]`.
 - La visibilidad de pronósticos se decide server-side comparando `now() >= deadline_at` — nunca en el cliente.
+- El score del header se resuelve en el Server Component: si `extraTime IS NOT NULL` se usa `homeScoreFull`/`awayScoreFull`; si no, `homeScore`/`awayScore`.
+- El nombre del equipo ganador se resuelve comparando `matchWinnerId === homeTeamId ? homeTeamName : awayTeamName`.
 
-**Referencias:** PRD-REQ-039, PRD-REQ-040, BR-022, BR-003, BR-006
+**Referencias:** PRD-REQ-039, PRD-REQ-040, PRD-REQ-097, PRD-REQ-098, PRD-REQ-099, PRD-REQ-100, BR-022, BR-003, BR-006, BR-046, BR-047
 
 ---
 
@@ -1655,34 +1931,57 @@ Accesos rápidos:
 **Flujo Principal:**
 
 1. El admin navega a `/admin` (redirect post-login o click en sidebar).
-2. El Server Component ejecuta queries paralelas:
-   - COUNT de participants con `has_paid = true` y `has_paid = false`.
-   - COUNT de matches con `status = 'finished'` y `status = 'scheduled'`.
-   - COUNT de predictions del torneo activo.
+2. El Server Component ejecuta queries en paralelo (`Promise.all()`):
+   - COUNT participants con `has_paid = true` y `has_paid = false`.
+   - COUNT matches con `status = 'finished'`, `status = 'scheduled'`, y matches sin resultado con deadline pasado.
+   - COUNT predictions del torneo activo.
    - SUM del pozo: `COUNT(participants WHERE has_paid = true) * inscription_fee`.
-3. El sistema renderiza las 4 tarjetas de resumen y los 4 accesos rápidos.
+3. El sistema renderiza 4 stat cards en grid 2×2 (desktop) / 1×4 (mobile), cada una clickeable.
+4. Cada stat card navega a su sección al hacer clic.
+
+**Layout de stat cards (patrón dashboard-01):**
+
+```
+┌──────────────────┐ ┌──────────────────┐
+│       24         │ │       104        │
+│  Participantes   │ │    Partidos      │
+│ 22 pagados       │ │ 96 jugados       │
+│ 2 pendientes ⚠  │ │ 8 sin resultado ⚠│
+└──────────────────┘ └──────────────────┘
+┌──────────────────┐ ┌──────────────────┐
+│     1,872        │ │   Bs. 12,000     │
+│  Pronósticos     │ │      Pozo        │
+│ de 2,496 posib.  │ │ 24 inscritos     │
+└──────────────────┘ └──────────────────┘
+```
+
+El subtítulo de advertencia (⚠) solo aparece cuando hay valores pendientes de atención.
 
 **Flujos Alternativos:**
 
 | Código | Condición | Respuesta del sistema |
 |---|---|---|
 | UC019-A1 | No hay torneo activo o draft | Mostrar: "No hay un torneo activo. Crea uno desde Configuración." |
-| UC019-A2 | Torneo sin participantes ni partidos | Las tarjetas muestran 0 en todos los valores. |
+| UC019-A2 | Torneo sin participantes ni partidos | Las tarjetas muestran 0 en todos los valores, sin badges de advertencia. |
 
 **Criterios de Aceptación (Gherkin):**
 
 ```gherkin
-Feature: Admin home page
+Feature: Admin home page con stat cards
 
   Scenario: Admin ve resumen del torneo activo
-    Given que hay 10 participantes (8 pagados, 2 pendientes)
-    And 20 partidos jugados de 104 totales
-    And se han enviado 156 predicciones
+    Given que hay 24 participantes (22 pagados, 2 pendientes)
+    And 96 partidos jugados y 8 sin resultado registrado
+    And 1872 predicciones enviadas
     When el admin navega a /admin
-    Then ve: "8 pagados · 2 pendientes" en la tarjeta de participantes
-    And ve: "20 jugados · 84 pendientes" en la tarjeta de partidos
-    And ve: "156 enviadas" en la tarjeta de predicciones
-    And ve: "Bs. 4.000" en la tarjeta del pozo
+    Then ve 4 stat cards: Participantes (24), Partidos (104), Pronósticos (1872), Pozo (Bs. 12.000)
+    And la card de Participantes muestra "2 pendientes" con indicador de advertencia
+    And la card de Partidos muestra "8 sin resultado" con indicador de advertencia
+
+  Scenario: Clic en stat card navega a sección
+    Given que veo la card de Participantes
+    When hago clic en la card
+    Then navego a /admin/participants
 
   Scenario: Sin torneo activo
     Given que no hay torneo en estado active o draft
@@ -1693,8 +1992,9 @@ Feature: Admin home page
 **Decisiones técnicas:**
 - Todas las queries se ejecutan en paralelo con `Promise.all()` en el Server Component.
 - No requiere Realtime — la página se refresca en cada navegación (Server Component).
+- Las stat cards se implementan con `<Card>` + `<CardHeader>` + `<CardContent>` de shadcn/ui, envueltos en `<Link>`.
 
-**Referencias:** PRD-REQ-051, BR-021
+**Referencias:** PRD-REQ-051, PRD-REQ-081, PRD-REQ-082, BR-021, BR-034
 
 ---
 
@@ -2036,7 +2336,7 @@ Feature: Tabla de clasificación de grupos
 | BR-008 | Puntos máximos por partido | El máximo de puntos que un participante puede obtener en un solo partido es **3** (1 resultado + 2 score exacto). | Sin bonificaciones adicionales por diferencia de goles u otros criterios. |
 | BR-009 | Puntos por campeón | Si el equipo elegido como campeón gana el Mundial, el participante recibe **+5 puntos** al final del torneo. | Solo se suman al finalizar el torneo, no durante los partidos. |
 | BR-010 | Elección de campeón | La elección de campeón debe realizarse **antes del inicio del primer partido** del torneo. Es **pública desde el momento de la elección**. No puede modificarse una vez iniciado el torneo. | Si no se eligió campeón, no se reciben los 5 puntos aunque el equipo sin elegir gane. |
-| BR-011 | Solo 90 minutos reglamentarios | Para todos los partidos (incluidos cuartos de final, semifinales y final), **solo cuentan los goles marcados en los 90 minutos reglamentarios** más el tiempo de descuento. Prórroga y tiros penales no se toman en cuenta. | El admin debe registrar el marcador al final de los 90 minutos, antes de que inicie la prórroga. |
+| BR-011 | Solo 90 minutos reglamentarios | Para todos los partidos (incluidos cuartos de final, semifinales y final), **solo cuentan los goles marcados en los 90 minutos reglamentarios más el tiempo de descuento** (tiempo añadido, ej. 90+3, 90+6). El marcador oficial para pronósticos y puntos es el marcador **al pitido final**, incluyendo los goles en descuento. Prórroga (los 30 min extra de la eliminatoria) y tiros penales no se toman en cuenta. **Decisión del cliente: Opción A, confirmada 17-May-2026.** El admin ingresa un único marcador (el del pitido final). No es necesario distinguir "marcador al 90' exacto" del "marcador al pitido final". |
 | BR-012 | Distribución del pozo — hasta 8 participantes | Si el número total de participantes con `has_paid = true` es **8 o menos**: el **100% del pozo** va al primer lugar. | No existe premio para el segundo lugar en este escenario. |
 | BR-013 | Distribución del pozo — más de 8 participantes | Si el número total de participantes con `has_paid = true` es **más de 8**: **75% al primer lugar** y **25% al segundo lugar**. | El pozo total = cantidad de participantes × Bs. 500. |
 | BR-014 | Empate en primer lugar | Si dos o más participantes empatan en el primer lugar: se fusionan los premios del 1er y 2do lugar (75% + 25% = 100%) y se dividen en partes iguales entre los empatados. El siguiente clasificado no recibe premio. | Aplica solo cuando hay más de 8 participantes. Con 8 o menos: el 100% se divide entre los empatados. |
@@ -2195,10 +2495,11 @@ El admin configura nombre y estado desde `/admin/settings` (FSD-UC-017) una vez 
 |---|---|---|---|
 | `id` | `uuid` | NO | Clave primaria, generada automáticamente. |
 | `name` | `text` | NO | Nombre del equipo (ej. "Argentina", "Brasil"). |
+| `code` | `text` | NO | Código FIFA de 3 letras (ej. "ARG", "BRA", "BIH"). Se usa en la prediction card para identificación compacta en móvil (BR-027). |
 | `flag_url` | `text` | SI | URL de la imagen de la bandera del equipo. |
 | `group_name` | `text` | SI | Grupo del torneo al que pertenece (ej. "A", "B"). `null` para equipos en fase eliminatoria sin grupo asignado. |
 
-**Nota:** Se pobla con los 48 equipos del Mundial 2026 como datos semilla.
+**Nota:** Se pobla con los 48 equipos del Mundial 2026 como datos semilla. El campo `code` es el código oficial FIFA (no siempre coincide con ISO 3166-2).
 
 ---
 
@@ -2409,6 +2710,8 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 | BR-020 | Settings del participante | PRD-REQ-037 | Gestión de settings | FSD-UC-016 | `app/settings/page.tsx` |
 | BR-021 | Configuración del torneo (admin) | PRD-REQ-038 | Admin configura torneo | FSD-UC-017 | `app/admin/settings/page.tsx` + `PATCH /api/admin/tournament` |
 | BR-022 | Detalle de partido post-deadline | PRD-REQ-039..040 | Vista de pronósticos por partido | FSD-UC-018 | `app/dashboard/matches/[matchId]/page.tsx` · Server Component |
+| BR-046 | Detalle de partido — score real para AET/PEN | PRD-REQ-097..098 | Score correcto en ambas páginas de detalle | FSD-UC-018 | `homeScoreFull`/`awayScoreFull` cuando `extraTime IS NOT NULL` |
+| BR-047 | Detalle de partido — badge resolución y equipo que avanza | PRD-REQ-099 | Información completa de resolución eliminatoria | FSD-UC-018 | `extraTime` badge + `matchWinnerId` → nombre ganador |
 
 ### Casos de Uso → NFRs
 
@@ -2519,6 +2822,89 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 
 ---
 
-*Fin del documento — FSD v0.4 — Pronóstico Mundial 2026 — Casos de uso documentados: FSD-UC-001 a FSD-UC-021*
+### FSD-UC-022 — Admin: Tabla de Participantes con Filtros y Menú Contextual
 
-*Generado: 2026-05-15 | Actualizado: 2026-05-17 | Próxima revisión: antes de implementar FSD-UC-020 y FSD-UC-021*
+**Descripción:** El admin gestiona la lista de participantes desde una data-table con capacidad de filtrado por estado de pago, ordenamiento y acciones por fila. Reemplaza la lista plana actual de `/admin/participants`.
+
+**Actor primario:** Admin
+
+**Precondiciones:**
+- El admin está autenticado con `role = 'admin'`.
+
+**Postcondiciones:**
+- El admin puede identificar, filtrar y operar sobre participantes individualmente.
+
+**Estructura de la tabla:**
+
+| Columna | Descripción |
+|---|---|
+| Avatar + Nombre | `UserAvatar` (32px) + nombre completo |
+| Email | Dirección de correo |
+| Estado pago | Badge: "Pagado" (verde) / "Pendiente" (amber) |
+| Campeón | Bandera + código del equipo elegido, o "—" si no eligió |
+| Inscrito el | Fecha de `joined_at` en formato "12 may. 2026" |
+| Acciones | Menú `⋮` (DropdownMenu) |
+
+**Acciones del menú contextual (`⋮`) por fila:**
+
+| Acción | Condición de visibilidad | Efecto |
+|---|---|---|
+| "Marcar como pagado" | Solo si `has_paid = false` | PATCH `/api/admin/participants/[id]` → `has_paid = true` · actualiza badge inline |
+| "Marcar como pendiente" | Solo si `has_paid = true` | PATCH → `has_paid = false` · actualiza badge inline |
+| "Resetear contraseña" | Siempre | POST `/api/admin/participants/[id]/reset-password` · muestra nueva contraseña en toast o modal |
+
+**Controles de la tabla:**
+
+- **Filtro por pago:** selector `[Todos | Pendientes]` en la toolbar — filtra client-side sobre los datos cargados.
+- **Ordenamiento:** click en columna "Nombre" y "Estado pago" alterna asc/desc — también client-side.
+- **Buscador por nombre (opcional):** input de texto para filtrar por `fullName`.
+
+**Flujo Principal:**
+
+1. El admin navega a `/admin/participants`.
+2. El Server Component carga todos los participantes del torneo activo con JOIN a `users` y `teams` (para campeón).
+3. Los datos se pasan como prop al componente Client `ParticipantsTable`.
+4. El cliente renderiza la data-table con filtros y ordenamiento client-side (sin re-queries al servidor para filtrar).
+5. Al ejecutar una acción (toggle pago / reset contraseña), el componente llama al Route Handler correspondiente y actualiza el estado local sin recargar la página.
+
+**Criterios de Aceptación (Gherkin):**
+
+```gherkin
+Feature: Data-table de participantes
+
+  Scenario: Ver tabla completa
+    Given hay 24 participantes (22 pagados, 2 pendientes)
+    When el admin navega a /admin/participants
+    Then ve una tabla con 24 filas
+    And cada fila muestra: avatar, nombre, email, badge de pago, campeón, fecha
+
+  Scenario: Filtrar pendientes de pago
+    Given que estoy en la tabla con filtro "Todos"
+    When selecciono el filtro "Pendientes"
+    Then la tabla muestra solo las 2 filas con has_paid = false
+
+  Scenario: Toggle de pago desde menú contextual
+    Given que Juan Pérez tiene has_paid = false
+    When hago clic en "⋮" de Juan → "Marcar como pagado"
+    Then el badge de Juan cambia a "Pagado" inmediatamente
+    And se muestra un toast "Pago confirmado para Juan Pérez"
+
+  Scenario: Reset contraseña
+    Given que hago clic en "⋮" de María → "Resetear contraseña"
+    Then aparece un modal/toast con la nueva contraseña temporal
+    And la contraseña queda cambiada en Supabase Auth
+```
+
+**Decisiones técnicas:**
+- Patrón shadcn/ui `data-table` con `@tanstack/react-table` (columnas con `columnDef`, estado de sorting/filtering en el componente).
+- El filtrado y ordenamiento son **client-side** sobre los datos ya cargados — no se re-consulta la BD.
+- El menú contextual usa el componente `DropdownMenu` ya instalado.
+- Las acciones mutantes (toggle pago, reset) llaman a Route Handlers existentes y actualizan el estado local optimísticamente.
+
+**Referencias:** PRD-REQ-083, PRD-REQ-084, BR-035
+
+---
+
+*Fin del documento — FSD v1.1 — Pronóstico Mundial 2026 — Casos de uso documentados: FSD-UC-001 a FSD-UC-022*
+
+*Generado: 2026-05-15 | Actualizado: 2026-05-17 | Próxima revisión: implementar BR-030..035 (UX global)*

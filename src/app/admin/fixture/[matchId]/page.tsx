@@ -14,6 +14,7 @@ function formatBOT(date: Date) {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   }).format(date);
 }
 
@@ -44,6 +45,12 @@ export default async function AdminMatchDetailPage({
       deadlineAt: matches.deadlineAt,
       homeScore: matches.homeScore,
       awayScore: matches.awayScore,
+      homeScoreFull: matches.homeScoreFull,
+      awayScoreFull: matches.awayScoreFull,
+      extraTime: matches.extraTime,
+      matchWinnerId: matches.matchWinnerId,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
       status: matches.status,
       stage: matches.stage,
       tournamentId: matches.tournamentId,
@@ -59,6 +66,19 @@ export default async function AdminMatchDetailPage({
 
   const now = new Date();
   const deadlinePassed = now >= matchRows.deadlineAt;
+
+  const displayHomeScore = matchRows.extraTime && matchRows.homeScoreFull !== null
+    ? matchRows.homeScoreFull
+    : matchRows.homeScore;
+  const displayAwayScore = matchRows.extraTime && matchRows.awayScoreFull !== null
+    ? matchRows.awayScoreFull
+    : matchRows.awayScore;
+  const extraTimeBadge = matchRows.extraTime === "pen" ? "pen." : matchRows.extraTime === "aet" ? "a.e.t." : null;
+  const winnerName = matchRows.matchWinnerId
+    ? matchRows.matchWinnerId === matchRows.homeTeamId
+      ? (matchRows.homeTeamName ?? null)
+      : (matchRows.awayTeamName ?? null)
+    : null;
 
   const rows = await db
     .select({
@@ -95,9 +115,14 @@ export default async function AdminMatchDetailPage({
             {matchRows.homeTeamName ?? "Por definir"}
           </span>
           {matchRows.status === "finished" ? (
-            <span className="text-2xl font-bold tabular-nums">
-              {matchRows.homeScore} — {matchRows.awayScore}
-            </span>
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold tabular-nums">
+                {displayHomeScore} — {displayAwayScore}
+              </span>
+              {extraTimeBadge && (
+                <span className="text-xs font-medium text-zinc-400">({extraTimeBadge})</span>
+              )}
+            </div>
           ) : (
             <span className="text-sm text-zinc-400">vs</span>
           )}
@@ -105,6 +130,11 @@ export default async function AdminMatchDetailPage({
             {matchRows.awayTeamName ?? "Por definir"}
           </span>
         </div>
+        {matchRows.status === "finished" && extraTimeBadge && winnerName && (
+          <p className="text-center text-sm text-zinc-500">
+            Avanza: <span className="font-medium">{winnerName}</span>
+          </p>
+        )}
         <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
           <span>Partido: {formatBOT(matchRows.scheduledAt)}</span>
           <span>Deadline: {formatBOT(matchRows.deadlineAt)}</span>

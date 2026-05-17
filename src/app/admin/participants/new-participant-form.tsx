@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +73,7 @@ export function NewParticipantForm() {
               name="fullName"
               required
               placeholder="Carlos Pérez"
+              disabled={loading}
             />
           </div>
 
@@ -83,6 +85,7 @@ export function NewParticipantForm() {
               type="email"
               required
               placeholder="carlos@email.com"
+              disabled={loading}
             />
           </div>
 
@@ -95,11 +98,12 @@ export function NewParticipantForm() {
               required
               placeholder="Temp1234!"
               autoComplete="off"
+              disabled={loading}
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <Checkbox id="hasPaid" name="hasPaid" defaultChecked />
+            <Checkbox id="hasPaid" name="hasPaid" defaultChecked disabled={loading} />
             <Label htmlFor="hasPaid" className="cursor-pointer">
               Pago de Bs. 500 confirmado
             </Label>
@@ -112,6 +116,7 @@ export function NewParticipantForm() {
           )}
 
           <Button type="submit" disabled={loading} className="w-full">
+            {loading && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             {loading ? "Creando cuenta…" : "Crear cuenta"}
           </Button>
         </form>

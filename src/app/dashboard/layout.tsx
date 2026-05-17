@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getLayoutUserData } from "@/lib/layout-data";
 import { AppLayout } from "@/components/app-layout";
 
 export default async function DashboardLayout({
@@ -17,17 +15,16 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  const row = await db.query.users.findFirst({
-    where: eq(users.id, user.id),
-    columns: { fullName: true, role: true, avatarUrl: true },
-  });
+  const data = await getLayoutUserData(user.id);
 
   return (
     <AppLayout
-      fullName={row?.fullName ?? ""}
-      avatarUrl={row?.avatarUrl}
-      isAdmin={row?.role === "admin"}
+      fullName={data.fullName}
+      avatarUrl={data.avatarUrl}
+      isAdmin={data.role === "admin"}
       userId={user.id}
+      championFlagUrl={data.championFlagUrl}
+      championTeamName={data.championTeamName}
     >
       {children}
     </AppLayout>

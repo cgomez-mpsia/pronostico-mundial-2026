@@ -49,6 +49,7 @@ export const users = pgTable(
 export const teams = pgTable("teams", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  code: text("code").notNull(),
   flagUrl: text("flag_url"),
   groupName: text("group_name"),
 });
@@ -85,6 +86,9 @@ export const matches = pgTable(
     // null hasta que el admin registra el resultado · solo 90 min · RB-03
     homeScore: integer("home_score"),
     awayScore: integer("away_score"),
+    // marcador al final de los 120 min (null si no hubo prórroga) · BR-029
+    homeScoreFull: integer("home_score_full"),
+    awayScoreFull: integer("away_score_full"),
     status: text("status").notNull().default("scheduled"),
     stage: text("stage").notNull(),
     // null = decidido en 90 min · 'aet' = tiempo extra · 'pen' = penales · BR-023

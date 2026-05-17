@@ -38,7 +38,19 @@
       "Bash(mkdir -p /Users/beto/Workspace/Mundial/src/app/profile/\\\\[userId\\\\])",
       "Bash(mkdir -p /Users/beto/Workspace/Mundial/src/app/api/admin/matches/\\\\[matchId\\\\] \\\\ *)",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
-      "Bash(xargs ls)"
+      "Bash(xargs ls)",
+      "Bash(npx shadcn@latest add dropdown-menu)",
+      "Bash(grep -n \"^## 12\\\\.\\\\|^## 11\\\\.\\\\|^---$\\\\|PRD-REQ-001\\\\|PRD-REQ-057\\\\b\" /Users/beto/Workspace/Mundial/docs/PRD_v0.1.md)",
+      "Bash(npx shadcn@latest add sonner --yes)",
+      "Bash(npx shadcn@latest add breadcrumb --overwrite)",
+      "Bash(npx shadcn@latest add collapsible table select --overwrite)",
+      "Bash(node -e \"require\\('@base-ui/react/collapsible'\\)\")",
+      "Bash(node -e \"require\\('@base-ui/react/select'\\)\")",
+      "Bash(npx shadcn@latest add alert-dialog dialog --overwrite)",
+      "Bash(grep -v \":0$\")",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"next dev\")"
     ],
     "additionalDirectories": [
       "/Users/beto/Workspace/Mundial/.claude/skills",

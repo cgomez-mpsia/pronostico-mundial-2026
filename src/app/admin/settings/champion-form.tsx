@@ -2,12 +2,28 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-
-const selectClass =
-  "h-9 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:border-zinc-600";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Team = { id: string; name: string };
 
@@ -19,24 +35,12 @@ interface Props {
 
 export function ChampionForm({ teams, applied, appliedAt }: Props) {
   const router = useRouter();
+  const [winnerTeamId, setWinnerTeamId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const winnerTeamId = (form.elements.namedItem("winnerTeamId") as HTMLSelectElement).value;
-
-    if (!winnerTeamId) {
-      setError("Selecciona el equipo campeón.");
-      return;
-    }
-
-    if (!confirm("¿Aplicar +5 puntos a los participantes que eligieron este campeón? Esta acción no se puede deshacer.")) {
-      return;
-    }
-
+  async function applyPoints() {
     setLoading(true);
     setError(null);
 
@@ -55,9 +59,18 @@ export function ChampionForm({ teams, applied, appliedAt }: Props) {
     }
 
     const data = await res.json();
-    setSuccess(true);
-    alert(`✓ Puntos aplicados a ${data.winnersCount} participante(s).`);
+    toast.success(`Puntos aplicados a ${data.winnersCount} participante(s).`);
     router.refresh();
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!winnerTeamId) {
+      setError("Selecciona el equipo campeón.");
+      return;
+    }
+    setError(null);
+    setConfirmOpen(true);
   }
 
   if (applied) {
@@ -81,34 +94,50 @@ export function ChampionForm({ teams, applied, appliedAt }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-sm">
-      <div className="space-y-1.5">
-        <Label htmlFor="winnerTeamId">Equipo campeón del mundo</Label>
-        <select
-          id="winnerTeamId"
-          name="winnerTeamId"
-          className={selectClass}
-          defaultValue=""
-        >
-          <option value="" disabled>Seleccionar equipo…</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-      </div>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-sm">
+        <div className="space-y-1.5">
+          <Label>Equipo campeón del mundo</Label>
+          <Select value={winnerTeamId} onValueChange={(v) => setWinnerTeamId(v ?? "")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Seleccionar equipo…" />
+            </SelectTrigger>
+            <SelectContent>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <p className="text-sm text-green-600 dark:text-green-400">✓ Puntos aplicados correctamente.</p>
-      )}
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-      <Button type="submit" size="sm" disabled={loading}>
-        {loading ? "Aplicando…" : "Aplicar +5 puntos al campeón"}
-      </Button>
-    </form>
+        <Button type="submit" size="sm" disabled={loading}>
+          {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+          {loading ? "Aplicando…" : "Aplicar +5 puntos al campeón"}
+        </Button>
+      </form>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Aplicar puntos de campeón?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se otorgarán +5 puntos a todos los participantes que eligieron este campeón. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={applyPoints} disabled={loading}>
+              {loading ? "Aplicando…" : "Aplicar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

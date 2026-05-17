@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
 export function FixtureRealtime() {
@@ -16,6 +17,7 @@ export function FixtureRealtime() {
         { event: "UPDATE", schema: "public", table: "matches" },
         () => {
           router.refresh();
+          toast.info("Resultados actualizados", { duration: 2500 });
         }
       )
       .subscribe();

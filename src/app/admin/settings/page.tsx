@@ -38,7 +38,7 @@ export default async function AdminSettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Torneo</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Torneo</h2>
           <p className="text-sm text-zinc-500">Nombre y estado del torneo.</p>
         </div>
         <TournamentForm
@@ -51,7 +51,7 @@ export default async function AdminSettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">Campeón Mundial</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">Campeón Mundial</h2>
           <p className="text-sm text-zinc-500">
             Aplica +5 puntos a los participantes que acertaron el campeón. Solo se puede hacer una vez.
           </p>

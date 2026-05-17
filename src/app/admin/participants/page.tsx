@@ -1,10 +1,9 @@
 import { db } from "@/db";
-import { participants, users, tournaments } from "@/db/schema";
+import { participants, users, tournaments, teams } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
-import { Badge } from "@/components/ui/badge";
+import { alias } from "drizzle-orm/pg-core";
 import { NewParticipantForm } from "./new-participant-form";
-import { ResetPasswordButton } from "./reset-password-button";
-import { TogglePaymentButton } from "./toggle-payment-button";
+import { ParticipantsTable } from "./participants-table";
 
 export default async function AdminParticipantsPage() {
   const tournament = await db.query.tournaments.findFirst({
@@ -15,6 +14,8 @@ export default async function AdminParticipantsPage() {
     columns: { id: true, name: true },
   });
 
+  const championTeam = alias(teams, "champion_team");
+
   const rows = tournament
     ? await db
         .select({
@@ -23,15 +24,18 @@ export default async function AdminParticipantsPage() {
           email: users.email,
           hasPaid: participants.hasPaid,
           joinedAt: participants.joinedAt,
+          championCode: championTeam.code,
+          championFlagUrl: championTeam.flagUrl,
         })
         .from(participants)
         .innerJoin(users, eq(participants.userId, users.id))
+        .leftJoin(championTeam, eq(participants.championTeamId, championTeam.id))
         .where(eq(participants.tournamentId, tournament.id))
-        .orderBy(participants.joinedAt)
+        .orderBy(users.fullName)
     : [];
 
   return (
-    <div className="space-y-8 p-8">
+    <div className="space-y-8 p-6 lg:p-8">
       <div>
         <h1 className="text-2xl font-semibold">Participantes</h1>
         {tournament && (
@@ -41,60 +45,20 @@ export default async function AdminParticipantsPage() {
 
       <NewParticipantForm />
 
-      {rows.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-zinc-500">
-                <th className="pb-2 pr-4 font-medium">Nombre</th>
-                <th className="pb-2 pr-4 font-medium">Email</th>
-                <th className="pb-2 pr-4 font-medium">Pago</th>
-                <th className="pb-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.map((r) => (
-                <tr key={r.participantId}>
-                  <td className="py-2 pr-4">{r.fullName}</td>
-                  <td className="py-2 pr-4 text-zinc-500">{r.email}</td>
-                  <td className="py-2 pr-4">
-                    {r.hasPaid ? (
-                      <Badge variant="default">Pagado</Badge>
-                    ) : (
-                      <Badge variant="secondary">Pendiente</Badge>
-                    )}
-                  </td>
-                  <td className="py-2">
-                    <div className="flex gap-1">
-                      <TogglePaymentButton
-                        participantId={r.participantId}
-                        hasPaid={r.hasPaid}
-                        fullName={r.fullName}
-                      />
-                      <ResetPasswordButton
-                        participantId={r.participantId}
-                        fullName={r.fullName}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {!tournament && (
+        <p className="text-sm text-red-500">
+          No hay un torneo activo. Crea un torneo para agregar participantes.
+        </p>
       )}
 
-      {rows.length === 0 && tournament && (
+      {tournament && rows.length === 0 && (
         <p className="text-sm text-zinc-400">
           No hay participantes aún. Crea el primero usando el formulario.
         </p>
       )}
 
-      {!tournament && (
-        <p className="text-sm text-red-500">
-          No hay un torneo activo. Crea un torneo en la base de datos para
-          poder agregar participantes.
-        </p>
+      {tournament && rows.length > 0 && (
+        <ParticipantsTable rows={rows} />
       )}
     </div>
   );

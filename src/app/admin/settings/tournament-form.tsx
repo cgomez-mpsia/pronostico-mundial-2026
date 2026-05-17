@@ -2,19 +2,24 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Borrador" },
   { value: "active", label: "Activo" },
   { value: "finished", label: "Finalizado" },
 ];
-
-const selectClass =
-  "h-9 w-full rounded-md border border-zinc-300 bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-zinc-400 dark:border-zinc-600";
 
 interface Props {
   initialName: string;
@@ -23,6 +28,7 @@ interface Props {
 
 export function TournamentForm({ initialName, initialStatus }: Props) {
   const router = useRouter();
+  const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -31,7 +37,6 @@ export function TournamentForm({ initialName, initialStatus }: Props) {
     e.preventDefault();
     const form = e.currentTarget;
     const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim();
-    const status = (form.elements.namedItem("status") as HTMLSelectElement).value;
 
     setLoading(true);
     setError(null);
@@ -63,17 +68,17 @@ export function TournamentForm({ initialName, initialStatus }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="status">Estado</Label>
-        <select
-          id="status"
-          name="status"
-          defaultValue={initialStatus}
-          className={selectClass}
-        >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        <Label>Estado</Label>
+        <Select value={status} onValueChange={(v) => setStatus(v ?? initialStatus)}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {error && (
@@ -86,6 +91,7 @@ export function TournamentForm({ initialName, initialStatus }: Props) {
       )}
 
       <Button type="submit" size="sm" disabled={loading}>
+        {loading && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
         {loading ? "Guardando…" : "Guardar cambios"}
       </Button>
     </form>

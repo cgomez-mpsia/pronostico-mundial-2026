@@ -8,8 +8,49 @@ interface Standing {
   rank: number;
   participantId: string;
   fullName: string;
+  avatarUrl: string | null;
+  championFlagUrl: string | null;
+  championTeamName: string | null;
   hasPaid: boolean;
   totalPoints: number;
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function Avatar({
+  name,
+  url,
+  championFlagUrl,
+  championTeamName,
+}: {
+  name: string;
+  url: string | null;
+  championFlagUrl: string | null;
+  championTeamName: string | null;
+}) {
+  return (
+    <span className="relative shrink-0">
+      {url ? (
+        <img src={url} alt={name} className="h-7 w-7 rounded-full object-cover" />
+      ) : (
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+          {initials(name)}
+        </span>
+      )}
+      {championFlagUrl && (
+        <img
+          src={championFlagUrl}
+          alt={championTeamName ?? "Campeón"}
+          title={championTeamName ?? undefined}
+          className="absolute -bottom-0.5 -right-1 h-2.5 w-3.5 rounded-sm object-cover ring-1 ring-white dark:ring-zinc-900"
+        />
+      )}
+    </span>
+  );
 }
 
 async function fetchStandings(): Promise<Standing[]> {
@@ -88,14 +129,24 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
               <td className="py-2.5 pr-4 tabular-nums text-zinc-400">
                 {s.rank}
               </td>
-              <td className="py-2.5 pr-4 font-medium">
-                {s.fullName}
-                {s.participantId === currentUserId && (
-                  <span className="ml-2 text-xs text-zinc-400">(tú)</span>
-                )}
-                {isAdmin && !s.hasPaid && (
-                  <span className="ml-2 text-xs text-amber-500">Pendiente</span>
-                )}
+              <td className="py-2.5 pr-4">
+                <div className="flex items-center gap-2.5">
+                  <Avatar
+                    name={s.fullName}
+                    url={s.avatarUrl}
+                    championFlagUrl={s.championFlagUrl}
+                    championTeamName={s.championTeamName}
+                  />
+                  <span className="font-medium">
+                    {s.fullName}
+                    {s.participantId === currentUserId && (
+                      <span className="ml-2 text-xs text-zinc-400">(tú)</span>
+                    )}
+                    {isAdmin && !s.hasPaid && (
+                      <span className="ml-2 text-xs text-amber-500">Pendiente</span>
+                    )}
+                  </span>
+                </div>
               </td>
               <td className="py-2.5 text-right tabular-nums font-semibold">
                 {s.totalPoints}

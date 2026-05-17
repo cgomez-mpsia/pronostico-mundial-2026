@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface AppLayoutProps {
@@ -6,10 +7,12 @@ interface AppLayoutProps {
   avatarUrl?: string | null;
   isAdmin: boolean;
   userId: string;
+  championFlagUrl?: string | null;
+  championTeamName?: string | null;
   children: React.ReactNode;
 }
 
-export function AppLayout({ fullName, avatarUrl, isAdmin, userId, children }: AppLayoutProps) {
+export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUrl, championTeamName, children }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar
@@ -17,10 +20,15 @@ export function AppLayout({ fullName, avatarUrl, isAdmin, userId, children }: Ap
         avatarUrl={avatarUrl}
         isAdmin={isAdmin}
         userId={userId}
+        championFlagUrl={championFlagUrl}
+        championTeamName={championTeamName}
       />
       <SidebarInset>
         <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
           <SidebarTrigger />
+          <div className="ml-1">
+            <AppBreadcrumb />
+          </div>
         </header>
         <main className="flex-1">{children}</main>
       </SidebarInset>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,10 +13,12 @@ import {
   Coins,
   Settings,
   LogOut,
+  ChevronDown,
 } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
 import { UserAvatar } from "@/components/user-avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -35,6 +38,8 @@ interface AppSidebarProps {
   avatarUrl?: string | null;
   isAdmin: boolean;
   userId: string;
+  championFlagUrl?: string | null;
+  championTeamName?: string | null;
 }
 
 const participantNav = [
@@ -45,14 +50,15 @@ const participantNav = [
 ];
 
 const adminNav = [
-  { href: "/admin/fixture", label: "Fixture", icon: CalendarDays },
+  { href: "/admin/fixture", label: "Partidos", icon: CalendarDays },
   { href: "/admin/participants", label: "Participantes", icon: Users },
   { href: "/admin/prizes", label: "Distribución del Pozo", icon: Coins },
   { href: "/admin/settings", label: "Configuración", icon: Settings },
 ];
 
-export function AppSidebar({ fullName, avatarUrl, isAdmin, userId }: AppSidebarProps) {
+export function AppSidebar({ fullName, avatarUrl, isAdmin, userId, championFlagUrl, championTeamName }: AppSidebarProps) {
   const pathname = usePathname();
+  const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith("/admin"));
 
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
@@ -62,7 +68,13 @@ export function AppSidebar({ fullName, avatarUrl, isAdmin, userId }: AppSidebarP
       {/* Header con avatar y nombre */}
       <SidebarHeader className="px-4 py-4">
         <div className="flex items-center gap-3">
-          <UserAvatar fullName={fullName} avatarUrl={avatarUrl} size={40} />
+          <UserAvatar
+              fullName={fullName}
+              avatarUrl={avatarUrl}
+              size={40}
+              championFlagUrl={championFlagUrl}
+              championTeamName={championTeamName}
+            />
           <span className="text-sm font-medium leading-tight truncate">{fullName}</span>
         </div>
       </SidebarHeader>
@@ -99,35 +111,49 @@ export function AppSidebar({ fullName, avatarUrl, isAdmin, userId }: AppSidebarP
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Panel Admin — solo visible para admins */}
+        {/* Panel Admin — colapsable, solo visible para admins */}
         {isAdmin && (
           <>
             <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel>Panel Admin</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminNav.map(({ href, label, icon: Icon }) => (
-                    <SidebarMenuItem key={href}>
-                      <SidebarMenuButton
-                        render={<Link href={href} />}
-                        isActive={isActive(href)}
-                      >
-                        <Icon />
-                        <span>{label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            <Collapsible open={adminOpen} onOpenChange={setAdminOpen}>
+              <SidebarGroup>
+                <SidebarGroupLabel
+                  render={
+                    <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between hover:text-sidebar-foreground" />
+                  }
+                >
+                  Panel Admin
+                  <ChevronDown
+                    className="h-4 w-4 shrink-0 transition-transform duration-200"
+                    style={{ transform: adminOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
+                  />
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {adminNav.map(({ href, label, icon: Icon }) => (
+                        <SidebarMenuItem key={href}>
+                          <SidebarMenuButton
+                            render={<Link href={href} />}
+                            isActive={isActive(href)}
+                          >
+                            <Icon />
+                            <span>{label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
           </>
         )}
       </SidebarContent>
 
       <SidebarSeparator />
 
-      {/* Footer con settings y logout */}
+      {/* Footer con Mi Cuenta y logout */}
       <SidebarFooter className="px-2 py-2">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -136,7 +162,7 @@ export function AppSidebar({ fullName, avatarUrl, isAdmin, userId }: AppSidebarP
               isActive={isActive("/settings")}
             >
               <Settings />
-              <span>Settings</span>
+              <span>Mi Cuenta</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

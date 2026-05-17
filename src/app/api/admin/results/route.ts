@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. Parsear body
-  const { matchId, homeScore, awayScore, extraTime, matchWinnerId } = await request.json();
+  const { matchId, homeScore, awayScore, homeScoreFull, awayScoreFull, extraTime, matchWinnerId } = await request.json();
 
   if (
     !matchId ||
@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
   }
   if (!extraTime && matchWinnerId) {
     return NextResponse.json({ error: "matchWinnerId requiere extraTime." }, { status: 400 });
+  }
+  if (extraTime && (typeof homeScoreFull !== "number" || typeof awayScoreFull !== "number")) {
+    return NextResponse.json({ error: "Se requiere el marcador a los 120 min." }, { status: 400 });
   }
 
   // 3. Verificar que el partido existe
@@ -95,6 +98,8 @@ export async function POST(request: NextRequest) {
       .set({
         homeScore,
         awayScore,
+        homeScoreFull: extraTime ? homeScoreFull : null,
+        awayScoreFull: extraTime ? awayScoreFull : null,
         status: "finished",
         extraTime: extraTime ?? null,
         matchWinnerId: matchWinnerId ?? null,

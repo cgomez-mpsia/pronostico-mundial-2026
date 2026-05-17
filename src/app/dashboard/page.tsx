@@ -16,6 +16,16 @@ function formatBOT(date: Date) {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function formatBOTTime(date: Date) {
+  return new Intl.DateTimeFormat("es-BO", {
+    timeZone: "America/La_Paz",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   }).format(date);
 }
 
@@ -83,6 +93,8 @@ export default async function DashboardPage() {
       deadlineAt: matches.deadlineAt,
       homeScore: matches.homeScore,
       awayScore: matches.awayScore,
+      homeScoreFull: matches.homeScoreFull,
+      awayScoreFull: matches.awayScoreFull,
       status: matches.status,
       stage: matches.stage,
       extraTime: matches.extraTime,
@@ -90,9 +102,11 @@ export default async function DashboardPage() {
       homeTeamId: matches.homeTeamId,
       awayTeamId: matches.awayTeamId,
       homeTeamName: homeTeam.name,
+      homeTeamCode: homeTeam.code,
       homeTeamFlagUrl: homeTeam.flagUrl,
       homeTeamGroupName: homeTeam.groupName,
       awayTeamName: awayTeam.name,
+      awayTeamCode: awayTeam.code,
       awayTeamFlagUrl: awayTeam.flagUrl,
     })
     .from(matches)
@@ -171,7 +185,7 @@ export default async function DashboardPage() {
                 <p className="border-b border-zinc-100 pb-1 text-xs font-medium capitalize text-zinc-400 dark:border-zinc-800">
                   {label}
                 </p>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                   {dayMatches.map((m) => {
                     const winnerName = m.matchWinnerId
                       ? m.matchWinnerId === m.homeTeamId
@@ -183,16 +197,21 @@ export default async function DashboardPage() {
                         key={m.matchId}
                         matchId={m.matchId}
                         homeTeamName={m.homeTeamName ?? "Por definir"}
+                        homeTeamCode={m.homeTeamCode ?? "TBD"}
                         homeTeamFlagUrl={m.homeTeamFlagUrl ?? null}
                         awayTeamName={m.awayTeamName ?? "Por definir"}
+                        awayTeamCode={m.awayTeamCode ?? "TBD"}
                         awayTeamFlagUrl={m.awayTeamFlagUrl ?? null}
+                        stageLabel={STAGE_LABELS[m.stage] ?? m.stage}
                         groupLabel={m.homeTeamGroupName ? `Grupo ${m.homeTeamGroupName}` : null}
-                        scheduledAtLabel={formatBOT(m.scheduledAt)}
+                        scheduledTimeLabel={formatBOTTime(m.scheduledAt)}
                         deadlineAtLabel={formatBOT(m.deadlineAt)}
                         isOpen={now < m.deadlineAt && m.status === "scheduled"}
                         matchStatus={m.status}
                         matchHomeScore={m.homeScore}
                         matchAwayScore={m.awayScore}
+                        matchHomeScoreFull={m.homeScoreFull ?? null}
+                        matchAwayScoreFull={m.awayScoreFull ?? null}
                         extraTime={m.extraTime ?? null}
                         matchWinnerName={winnerName}
                         prediction={predMap.get(m.matchId) ?? null}

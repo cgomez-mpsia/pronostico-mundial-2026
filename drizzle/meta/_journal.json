@@ -29,6 +29,20 @@
       "when": 1778991989392,
       "tag": "0003_familiar_zaran",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1778994382935,
+      "tag": "0004_wise_marauders",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1779032887471,
+      "tag": "0005_elite_mother_askani",
+      "breakpoints": true
     }
   ]
 }
