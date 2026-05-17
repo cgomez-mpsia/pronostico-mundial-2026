@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { Navbar } from "@/components/navbar";
+import { AppLayout } from "@/components/app-layout";
 
 export default async function AdminLayout({
   children,
@@ -19,15 +19,19 @@ export default async function AdminLayout({
 
   const row = await db.query.users.findFirst({
     where: eq(users.id, user.id),
-    columns: { role: true },
+    columns: { fullName: true, role: true, avatarUrl: true },
   });
 
   if (row?.role !== "admin") redirect("/dashboard");
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 dark:bg-zinc-950">
-      <Navbar />
-      <main className="flex-1">{children}</main>
-    </div>
+    <AppLayout
+      fullName={row?.fullName ?? ""}
+      avatarUrl={row?.avatarUrl}
+      isAdmin={true}
+      userId={user.id}
+    >
+      {children}
+    </AppLayout>
   );
 }

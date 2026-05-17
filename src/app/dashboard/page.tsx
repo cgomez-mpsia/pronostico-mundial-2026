@@ -5,6 +5,7 @@ import { participants, tournaments, teams, matches, predictions } from "@/db/sch
 import { eq, or, asc } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { PredictionCard } from "./prediction-card";
+import { FixtureRealtime } from "./fixture-realtime";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -105,6 +106,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
+      <FixtureRealtime />
       <div>
         <h1 className="text-2xl font-semibold">Fixture</h1>
         <p className="text-sm text-zinc-500">{tournament.name}</p>

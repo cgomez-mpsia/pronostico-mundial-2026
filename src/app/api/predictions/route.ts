@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
   }
 
-  const { matchId, homeScore, awayScore } = await request.json();
+  const { matchId, homeScore, awayScore, participantId: targetParticipantId } = await request.json();
 
   if (
     !matchId ||
@@ -24,6 +24,17 @@ export async function POST(request: NextRequest) {
     awayScore < 0
   ) {
     return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
+  }
+
+  // Si se pasa participantId, verificar que el caller es admin (fallback WhatsApp)
+  if (targetParticipantId) {
+    const callerRow = await db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { role: true },
+    });
+    if (callerRow?.role !== "admin") {
+      return NextResponse.json({ error: "Solo el admin puede ingresar pronósticos por terceros." }, { status: 403 });
+    }
   }
 
   // Verificar que el partido existe y está abierto
@@ -43,7 +54,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Verificar plazo server-side (BR-003, BR-004)
+  // Verificar plazo server-side (BR-003, BR-004) — aplica a todos, incluido admin (UC007-A8)
   if (new Date() >= match.deadlineAt) {
     return NextResponse.json(
       { error: "El plazo para este partido ya cerró." },
@@ -51,14 +62,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Buscar participante con pago confirmado
-  const participant = await db.query.participants.findFirst({
-    where: and(
-      eq(participants.userId, user.id),
-      eq(participants.tournamentId, match.tournamentId)
-    ),
-    columns: { id: true, hasPaid: true },
-  });
+  // Resolver participante: propio o el especificado por admin
+  const participant = targetParticipantId
+    ? await db.query.participants.findFirst({
+        where: and(
+          eq(participants.id, targetParticipantId),
+          eq(participants.tournamentId, match.tournamentId)
+        ),
+        columns: { id: true, hasPaid: true },
+      })
+    : await db.query.participants.findFirst({
+        where: and(
+          eq(participants.userId, user.id),
+          eq(participants.tournamentId, match.tournamentId)
+        ),
+        columns: { id: true, hasPaid: true },
+      });
 
   if (!participant) {
     return NextResponse.json(
@@ -69,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   if (!participant.hasPaid) {
     return NextResponse.json(
-      { error: "Tu inscripción está pendiente de confirmación de pago." },
+      { error: "La inscripción del participante está pendiente de confirmación de pago." },
       { status: 403 }
     );
   }

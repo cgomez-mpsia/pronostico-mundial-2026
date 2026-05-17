@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { participants, tournaments } from "@/db/schema";
+import { participants, tournaments, users } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { StandingsTable } from "./standings-table";
 
@@ -21,12 +21,18 @@ export default async function StandingsPage() {
     columns: { id: true, name: true },
   });
 
-  const participant = tournament
-    ? await db.query.participants.findFirst({
-        where: eq(participants.userId, user.id),
-        columns: { id: true },
-      })
-    : null;
+  const [participant, userRow] = await Promise.all([
+    tournament
+      ? db.query.participants.findFirst({
+          where: eq(participants.userId, user.id),
+          columns: { id: true },
+        })
+      : null,
+    db.query.users.findFirst({
+      where: eq(users.id, user.id),
+      columns: { role: true },
+    }),
+  ]);
 
   return (
     <div className="space-y-6 p-6 lg:p-8">
@@ -36,7 +42,7 @@ export default async function StandingsPage() {
           <p className="text-sm text-zinc-500">{tournament.name}</p>
         )}
       </div>
-      <StandingsTable currentUserId={participant?.id ?? ""} />
+      <StandingsTable currentUserId={participant?.id ?? ""} isAdmin={userRow?.role === "admin"} />
     </div>
   );
 }

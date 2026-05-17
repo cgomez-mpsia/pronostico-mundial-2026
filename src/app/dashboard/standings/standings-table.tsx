@@ -8,6 +8,7 @@ interface Standing {
   rank: number;
   participantId: string;
   fullName: string;
+  hasPaid: boolean;
   totalPoints: number;
 }
 
@@ -17,7 +18,7 @@ async function fetchStandings(): Promise<Standing[]> {
   return res.json();
 }
 
-export function StandingsTable({ currentUserId }: { currentUserId: string }) {
+export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: string; isAdmin: boolean }) {
   const queryClient = useQueryClient();
 
   const { data: standings = [], isLoading } = useQuery({
@@ -91,6 +92,9 @@ export function StandingsTable({ currentUserId }: { currentUserId: string }) {
                 {s.fullName}
                 {s.participantId === currentUserId && (
                   <span className="ml-2 text-xs text-zinc-400">(tú)</span>
+                )}
+                {isAdmin && !s.hasPaid && (
+                  <span className="ml-2 text-xs text-amber-500">Pendiente</span>
                 )}
               </td>
               <td className="py-2.5 text-right tabular-nums font-semibold">

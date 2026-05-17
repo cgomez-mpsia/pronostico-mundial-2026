@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 interface Prediction {
@@ -138,6 +139,18 @@ export function PredictionCard({
         <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
           Pago pendiente — no puedes ingresar pronósticos.
         </p>
+      )}
+
+      {/* Link a detalle post-deadline */}
+      {!isOpen && (
+        <div className="mt-2">
+          <Link
+            href={`/dashboard/matches/${matchId}`}
+            className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+          >
+            Ver pronósticos →
+          </Link>
+        </div>
       )}
     </div>
   );

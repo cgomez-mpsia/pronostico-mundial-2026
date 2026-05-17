@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { tournaments, participants, users, matchPoints } from "@/db/schema";
-import { eq, or, sum, sql } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 
 export async function GET() {
   const supabase = await createClient();
@@ -31,13 +31,14 @@ export async function GET() {
     .select({
       participantId: participants.id,
       fullName: users.fullName,
-      totalPoints: sql<number>`COALESCE(SUM(${matchPoints.totalPoints}), 0)`.as("total_points"),
+      hasPaid: participants.hasPaid,
+      totalPoints: sql<number>`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`.as("total_points"),
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
     .where(eq(participants.tournamentId, tournament.id))
-    .groupBy(participants.id, users.fullName)
+    .groupBy(participants.id, users.fullName, participants.hasPaid, participants.championPoints)
     .orderBy(sql`total_points DESC`, users.fullName);
 
   // Calcular rank con lógica de empates en JS
@@ -50,6 +51,7 @@ export async function GET() {
       rank,
       participantId: row.participantId,
       fullName: row.fullName,
+      hasPaid: row.hasPaid,
       totalPoints: Number(row.totalPoints),
     };
   });

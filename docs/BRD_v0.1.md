@@ -8,12 +8,12 @@
 | Campo | Valor |
 |---|---|
 | **Proyecto** | Pronóstico Mundial 2026 |
-| **Versión** | 0.1 |
-| **Fecha** | 15-May-2026 |
-| **Estado** | Borrador |
+| **Versión** | 0.2 |
+| **Fecha** | 16-May-2026 |
+| **Estado** | Implementado — v1 en producción (Vercel) |
 | **Autor** | Alberto Gomez |
 | **Cliente / Sponsor** | Vladimir Mariaca Vargas (organizador del torneo) |
-| **Próxima revisión** | Pendiente de aprobación del cliente |
+| **Próxima revisión** | Antes del partido inaugural del Mundial 2026 |
 | **Documentos relacionados** | REGLAS_PRONOSTICO_MUNDIAL_2026.md · INVITACION_PRONOSTICO_MUNDIAL_2026.md |
 
 ---
@@ -134,6 +134,19 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | ID | Requerimiento | Justificación |
 |---|---|---|
 | **BR-009** | El administrador debe poder cargar manualmente el pronóstico de un participante desde el panel de administración, con registro de la fuente (fallback de WhatsApp) y timestamp, siempre que sea antes del plazo de las 15:00. | Fallback operativo requerido por el cliente para casos de fallo de la plataforma o problemas de acceso del participante. |
+| **BR-010** | El administrador debe poder crear, editar y gestionar los partidos del fixture desde el panel de administración (fecha, hora, equipos, etapa). | El fixture del Mundial tiene 104 partidos; cargarlo y ajustarlo únicamente por SQL Editor no es operativamente viable. |
+| **BR-011** | El administrador debe poder aplicar los +5 puntos de campeón al finalizar el torneo, indicando qué equipo ganó el Mundial. El sistema debe calcular automáticamente qué participantes aciertan y sumar los puntos. | Cierra el cálculo final del torneo; sin esta acción la clasificación final es incompleta. |
+| **BR-012** | Cada participante debe poder ver el desglose de puntos partido a partido (pronóstico ingresado, resultado oficial, puntos obtenidos) tanto para sí mismo como para los demás participantes (post-deadline). | Transparencia y auditoría: los participantes necesitan verificar que sus puntos fueron calculados correctamente. |
+| **BR-013** | El administrador debe poder visualizar la distribución del pozo en tiempo real (pozo total acumulado, monto estimado para cada posición) durante y al final del torneo. | El admin necesita esta información para preparar la distribución final del dinero. |
+| **BR-014** | Cada participante debe poder subir y cambiar su foto de perfil. La foto debe ser visible públicamente en la tabla de posiciones y en la vista de pronósticos de los demás. El participante gestiona su propia foto; el admin no puede editar fotos de otros usuarios. | Aporta identidad visual al torneo — en un grupo privado de amigos, reconocer a cada participante por su foto mejora la experiencia y el engagement. |
+| **BR-015** | El sistema debe mostrar un perfil público de cada participante, visible para cualquier usuario autenticado, con: nombre, ranking actual, puntos totales, campeón elegido, pronósticos partido a partido (post-deadline) y estadísticas calculadas (% de resultados correctos, % de scores exactos, racha de partidos con al menos 1 punto). | Aporta transparencia y elemento social al torneo; los participantes pueden comparar su rendimiento con el de los demás. |
+| **BR-016** | El participante debe poder ver en su propio perfil: su estado de pago (cuota confirmada o pendiente), la brecha de puntos con el líder actual ("Te faltan X puntos para el 1er lugar") y una opción para cambiar su contraseña. Estas secciones son visibles únicamente para el propio participante. | Información de cuenta y contexto competitivo que el participante necesita sin tener que contactar al admin. |
+| **BR-017** | Los partidos de la fase eliminatoria (octavos, cuartos, semifinales, tercer puesto y final) deben pre-cargarse con fechas conocidas pero sin equipos asignados ("Por definir"). El administrador asigna los dos equipos de cada partido en cuanto se conocen los clasificados, activando el formulario de pronóstico para los participantes. El panel de administración debe mostrar una alerta cuando un partido tiene equipos pendientes de asignación y su plazo de cierre está a menos de 24 horas. | El fixture eliminatorio del Mundial no puede cargarse completo al inicio; los equipos dependen de quién avanza en cada ronda. El admin necesita un aviso para no perder la ventana de pronósticos (especialmente en octavos, donde el plazo puede ser el mismo día que termina la fase de grupos). |
+| **BR-018** | El sistema debe ofrecer una página de reglas del torneo accesible desde la barra de navegación para todos los participantes autenticados. La página debe presentar las reglas en lenguaje claro y de usuario (no técnico): sistema de puntos, plazo de cierre, caso "No pronosticó", selección de campeón, distribución del pozo y la restricción de 90 minutos reglamentarios. | Los participantes necesitan consultar las reglas de forma autónoma durante el torneo, especialmente cuando tienen dudas sobre el cálculo de puntos o el plazo. Reduce la carga de consultas al organizador. |
+| **BR-019** | La interfaz debe usar una barra de navegación lateral (sidebar) como estructura principal de navegación, visible en escritorio y accesible como drawer en mobile. El sidebar debe mostrar el avatar y nombre del usuario autenticado en su encabezado, y la sección de "Admin" solo debe ser visible para usuarios con rol admin. | Un sidebar maneja mejor los 5-6 destinos de navegación de la app que un navbar top, especialmente en mobile. El avatar en el header personaliza la experiencia y confirma visualmente quién está conectado. |
+| **BR-020** | El sistema debe ofrecer una página de configuración de cuenta (`/settings`) accesible desde el sidebar, donde el participante puede: cambiar su foto de perfil, cambiar su contraseña y ver el estado de su pago (read-only). Estas acciones son privadas y solo accesibles por el propio participante. | Separar la configuración de cuenta del perfil público sigue el patrón estándar (perfil = lo que ven los demás; settings = lo que configurás vos). |
+| **BR-021** | El administrador debe poder configurar el torneo desde un panel de ajustes (`/admin/settings`): editar el nombre del torneo, consultar la cuota de inscripción, avanzar el estado del torneo (draft → active → finished) y ejecutar la acción de aplicar puntos de Campeón Mundial. | Centralizar las acciones de configuración global del torneo en un único lugar del panel admin facilita la operación y reduce errores. |
+| **BR-022** | Al hacer clic en un partido del fixture, el sistema debe mostrar una página de detalle del partido con: información del partido (equipos, fecha, etapa, resultado si terminó) y los pronósticos de todos los participantes una vez que el plazo de cierre haya pasado. Si el partido tiene resultado registrado, también se muestran los puntos obtenidos por cada participante en ese partido. | Permite ver la vista social del partido (quién pronosticó qué) de forma centralizada, en lugar de tener que revisar el perfil de cada participante individualmente. |
 
 ### Could Have (Deseables)
 
@@ -155,6 +168,8 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | **RB-06** | La elección del Campeón Mundial debe realizarse antes del inicio del partido inaugural del torneo. Una vez realizada, es pública e irrevocable. Al terminar el torneo, si el equipo elegido es campeón, el participante suma +5 puntos a su total. | REGLAS §2 |
 | **RB-07** | Distribución del pozo según número de participantes inscritos: (a) 8 o menos: 100 % al 1er lugar. (b) Más de 8: 75 % al 1er lugar y 25 % al 2do lugar. | REGLAS §4 |
 | **RB-08** | Reglas de empate en la distribución del pozo: (a) Empate en 1er lugar: los premios del 1er y 2do lugar (75 % + 25 % = 100 %) se dividen en partes iguales entre los empatados; el siguiente clasificado no recibe premio. (b) Empate en 2do lugar (con un único ganador del 1er lugar): el 25 % del 2do lugar se divide en partes iguales entre todos los empatados. | REGLAS §4 |
+| **RB-09** | Estado del torneo y efecto en la UI del participante: (a) `draft` — el participante puede iniciar sesión, ver el fixture y elegir campeón, pero no puede ingresar pronósticos. (b) `active` — todo habilitado. (c) `finished` — pronósticos bloqueados, no se puede elegir campeón, la acción de puntos de campeón queda disponible para el admin. | Necesario para gestionar el período previo al inicio del torneo (carga del fixture, inscripción de participantes) sin abrir la ventana de pronósticos. |
+| **RB-10** | Desempate en la tabla de posiciones: cuando dos o más participantes tienen el mismo puntaje total, comparten el mismo rango numérico. El orden de presentación dentro del empate es alfabético por nombre (A→Z). El desempate alfabético es solo de visualización — no afecta la distribución del pozo (que usa puntaje únicamente). | Garantiza un orden de presentación determinístico y neutral cuando hay empates. |
 
 ---
 
@@ -203,6 +218,26 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 - Cálculo y visualización de la distribución del pozo al final del torneo.
 - Carga manual de pronósticos por el administrador (fallback de WhatsApp).
 - Diseño responsive optimizado para mobile (los participantes usan smartphone).
+- Perfil de participante: foto de perfil (subida y cambio por el propio usuario, almacenada en Supabase Storage, visible en standings y vista de pronósticos).
+- Perfil público de participante: estadísticas (% resultados, % exactos, racha), pronósticos post-deadline, campeón elegido.
+- Perfil privado (solo el propio participante): estado de pago, brecha con el líder, cambio de contraseña.
+- Gestión de partidos eliminatorios con equipos TBD: pre-carga con fechas y asignación tardía de equipos; alerta en panel admin cuando el deadline se acerca con equipos sin asignar.
+- Página de reglas del torneo: accesible desde la navbar, contenido estático en lenguaje de usuario.
+- Sidebar de navegación (shadcn/ui): avatar del usuario en el header, ítems de navegación, sección Admin condicional.
+- Avatar del usuario visible en: sidebar header, tabla de posiciones, vista de pronósticos post-deadline, página de perfil.
+- Página de settings (/settings): foto de perfil, cambio de contraseña, estado de pago.
+- Panel de configuración del torneo para admin (/admin/settings): nombre, estado, acción de puntos de campeón.
+- Página de detalle de partido (/dashboard/matches/[matchId]): pronósticos post-deadline de todos los participantes y puntos obtenidos.
+- Página de Campeón (/dashboard/champion): selector de campeón propio (antes del torneo) y vista pública de los picks de todos los participantes.
+- Perfil público con tabs: Resumen (stats, campeón) y Desglose (puntos partido a partido).
+- Sistema de feedback global (toasts via shadcn/ui Sonner) para confirmaciones de acciones.
+- Filtro "Solo partidos abiertos" en el fixture del participante (toggle en /dashboard).
+- Reseteo de contraseña de participante por el admin desde el panel de participantes.
+- Matriz de estados del torneo (draft/active/finished) con efectos sobre las acciones disponibles.
+- Panel de inicio del admin (/admin): resumen de estado del torneo (participantes, partidos, predicciones, pozo).
+- Lista de participantes en admin: columnas definidas (nombre, email, estado de pago, campeón, fecha) con toggle de pago inline.
+- Creación de cuentas sin email de confirmación: `email_confirm: true` en Supabase Auth Admin API para evitar emails automáticos al participante.
+- Teclado numérico en campos de score en mobile (`inputMode="numeric"`).
 
 ### 10.2 Fuera del alcance (Out of scope — v1)
 
@@ -257,6 +292,19 @@ La siguiente tabla mapea los requerimientos de negocio de este BRD a las seccion
 | **RB-06** | Campeón Mundial: irrevocable, público, +5 pts | Módulo de Pronósticos | FSD §Campeón Mundial: visibilidad, bloqueo post-selección |
 | **RB-07** | Distribución 100 % / 75-25 % según inscritos | Módulo de Premiación | FSD §Distribución del Pozo: umbral 8 participantes |
 | **RB-08** | Empates en 1er y 2do lugar | Módulo de Premiación | FSD §Distribución del Pozo: casos de empate, fusión de premios |
+| **BR-014** | Foto de perfil: subida, cambio, visibilidad pública | Perfil de Participante | FSD-UC-011: gestión de foto de perfil |
+| **BR-015** | Perfil público del participante (estadísticas) | Perfil de Participante | FSD-UC-012: ver perfil público |
+| **BR-016** | Perfil privado (estado de pago, brecha, contraseña) | Perfil de Participante | FSD-UC-013: gestionar perfil privado |
+| **BR-017** | Partidos eliminatorios TBD + alerta admin | Gestión del Fixture | FSD-UC-007 (flujo de asignación eliminatoria) + FSD-UC-014 (alerta admin) |
+| **BR-018** | Página de reglas del torneo | Información / UX | FSD-UC-014: página de reglas |
+| **BR-019** | Sidebar de navegación con avatar | UI / Layout | FSD-UC-015: layout con sidebar y avatar |
+| **BR-020** | Página de settings del participante | Configuración de cuenta | FSD-UC-016: gestión de settings |
+| **BR-021** | Configuración del torneo (admin) | Panel de administración | FSD-UC-017: admin configura el torneo |
+| **BR-022** | Página de detalle de partido con pronósticos post-deadline | Vista de partido | FSD-UC-018: detalle de partido |
+| **RB-09** | Estados del torneo y efectos en UI | Gestión del Torneo | FSD-UC-017 (admin) + Matriz de estados |
+| **RB-10** | Desempate alfabético en standings | Tabla de Posiciones | FSD-UC-003 (standings tiebreaker) |
+| Técnico | Creación de usuarios sin email de confirmación (email_confirm: true) | Gestión de Usuarios | FSD-UC-005 (decisión técnica) |
+| Técnico | Admin landing page con stats del torneo | Panel Admin | FSD-UC-019: admin home |
 
 ---
 

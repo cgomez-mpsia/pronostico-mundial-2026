@@ -20,6 +20,8 @@ export const tournaments = pgTable(
     name: text("name").notNull(),
     inscriptionFee: numeric("inscription_fee", { precision: 10, scale: 2 }).notNull(),
     status: text("status").notNull().default("draft"),
+    championApplied: boolean("champion_applied").notNull().default(false),
+    championAppliedAt: timestamp("champion_applied_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -35,6 +37,8 @@ export const users = pgTable(
     email: text("email").notNull().unique(),
     fullName: text("full_name").notNull(),
     role: text("role").notNull().default("participant"),
+    // null = no ha subido foto → UI muestra avatar de iniciales · FSD-UC-011
+    avatarUrl: text("avatar_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -56,8 +60,10 @@ export const participants = pgTable(
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     tournamentId: uuid("tournament_id").notNull().references(() => tournaments.id, { onDelete: "cascade" }),
     hasPaid: boolean("has_paid").notNull().default(false),
-    // null = no ha elegido campeón aún · RB-06
+    // null = no ha elegido campeón aún · BR-010
     championTeamId: uuid("champion_team_id").references(() => teams.id),
+    // +5 pts si acertó el campeón · separado de match_points (CHECK <= 3) · FSD-UC-008
+    championPoints: integer("champion_points").notNull().default(0),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -125,7 +131,7 @@ export const matchPoints = pgTable(
   ]
 );
 
-// Types inferidos de Drizzle para usar en el resto de la app
+// Tipos inferidos de Drizzle para usar en el resto de la app
 export type Tournament = typeof tournaments.$inferSelect;
 export type NewTournament = typeof tournaments.$inferInsert;
 export type User = typeof users.$inferSelect;

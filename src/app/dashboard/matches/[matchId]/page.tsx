@@ -1,0 +1,208 @@
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { db } from "@/db";
+import { participants, users, matches, predictions, matchPoints, teams, tournaments } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import Link from "next/link";
+
+function formatBOT(date: Date) {
+  return new Intl.DateTimeFormat("es-BO", {
+    timeZone: "America/La_Paz",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+const STAGE_LABELS: Record<string, string> = {
+  group: "Fase de Grupos",
+  r16: "Octavos de Final",
+  qf: "Cuartos de Final",
+  sf: "Semifinales",
+  third: "Tercer Puesto",
+  final: "Final",
+};
+
+export default async function MatchDetailPage({
+  params,
+}: {
+  params: Promise<{ matchId: string }>;
+}) {
+  const { matchId } = await params;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const homeTeamAlias = alias(teams, "home_team");
+  const awayTeamAlias = alias(teams, "away_team");
+
+  const [matchRows] = await db
+    .select({
+      id: matches.id,
+      scheduledAt: matches.scheduledAt,
+      deadlineAt: matches.deadlineAt,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+      status: matches.status,
+      stage: matches.stage,
+      tournamentId: matches.tournamentId,
+      homeTeamName: homeTeamAlias.name,
+      awayTeamName: awayTeamAlias.name,
+    })
+    .from(matches)
+    .leftJoin(homeTeamAlias, eq(matches.homeTeamId, homeTeamAlias.id))
+    .leftJoin(awayTeamAlias, eq(matches.awayTeamId, awayTeamAlias.id))
+    .where(eq(matches.id, matchId));
+
+  if (!matchRows) notFound();
+
+  const now = new Date();
+  const deadlinePassed = now >= matchRows.deadlineAt;
+  const isFinished = matchRows.status === "finished";
+
+  // Todos los participantes del torneo con sus predicciones y puntos para este partido
+  const rows = await db
+    .select({
+      participantId: participants.id,
+      fullName: users.fullName,
+      userId: participants.userId,
+      predHomeScore: predictions.homeScore,
+      predAwayScore: predictions.awayScore,
+      isManuallyEntered: predictions.isManuallyEntered,
+      resultPoints: matchPoints.resultPoints,
+      exactPoints: matchPoints.exactPoints,
+      totalPoints: matchPoints.totalPoints,
+    })
+    .from(participants)
+    .innerJoin(users, eq(participants.userId, users.id))
+    .leftJoin(
+      predictions,
+      and(eq(predictions.participantId, participants.id), eq(predictions.matchId, matchId))
+    )
+    .leftJoin(
+      matchPoints,
+      and(eq(matchPoints.participantId, participants.id), eq(matchPoints.matchId, matchId))
+    )
+    .where(eq(participants.tournamentId, matchRows.tournamentId))
+    .orderBy(users.fullName);
+
+  const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
+
+  return (
+    <div className="space-y-6 p-6 lg:p-8 max-w-2xl">
+      {/* Back */}
+      <Link href="/dashboard" className="text-xs text-zinc-400 hover:text-zinc-600">
+        ← Volver al fixture
+      </Link>
+
+      {/* Header */}
+      <div className="space-y-1">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">
+          {STAGE_LABELS[matchRows.stage] ?? matchRows.stage}
+        </p>
+        <div className="flex items-center gap-4">
+          <span className="text-lg font-semibold flex-1 text-right">
+            {matchRows.homeTeamName ?? "Por definir"}
+          </span>
+          {isFinished ? (
+            <span className="text-2xl font-bold tabular-nums">
+              {matchRows.homeScore} — {matchRows.awayScore}
+            </span>
+          ) : (
+            <span className="text-sm text-zinc-400 tabular-nums">vs</span>
+          )}
+          <span className="text-lg font-semibold flex-1">
+            {matchRows.awayTeamName ?? "Por definir"}
+          </span>
+        </div>
+        <p className="text-sm text-zinc-500 text-center">{formatBOT(matchRows.scheduledAt)}</p>
+        {isFinished && (
+          <p className="text-center text-xs text-zinc-400">Partido finalizado</p>
+        )}
+      </div>
+
+      {/* Pre-deadline: solo contador */}
+      {!deadlinePassed && !isFinished && (
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="text-2xl font-bold tabular-nums">{submittedCount} / {rows.length}</p>
+          <p className="text-sm text-zinc-500">participantes enviaron su pronóstico</p>
+          <p className="mt-2 text-xs text-zinc-400">
+            Los pronósticos se revelan el {formatBOT(matchRows.deadlineAt)}
+          </p>
+        </div>
+      )}
+
+      {/* Post-deadline o finalizado: tabla completa */}
+      {(deadlinePassed || isFinished) && rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs text-zinc-500">
+                <th className="pb-2 pr-4 font-medium">Participante</th>
+                <th className="pb-2 pr-4 font-medium text-center">Pronóstico</th>
+                {isFinished && (
+                  <th className="pb-2 font-medium text-right">Pts</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {rows
+                .sort((a, b) => {
+                  if (isFinished) return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
+                  return 0;
+                })
+                .map((r) => {
+                  const isCurrentUser = r.userId === user.id;
+                  const hasPred = r.isManuallyEntered;
+                  return (
+                    <tr
+                      key={r.participantId}
+                      className={isCurrentUser ? "bg-zinc-50 dark:bg-zinc-800/50" : ""}
+                    >
+                      <td className="py-2.5 pr-4 font-medium">
+                        <Link
+                          href={`/profile/${r.userId}`}
+                          className="hover:underline"
+                        >
+                          {r.fullName}
+                        </Link>
+                        {isCurrentUser && (
+                          <span className="ml-1.5 text-xs text-zinc-400">(tú)</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 pr-4 text-center tabular-nums text-zinc-500">
+                        {hasPred
+                          ? `${r.predHomeScore} — ${r.predAwayScore}`
+                          : <span className="text-zinc-300 dark:text-zinc-600">—</span>}
+                      </td>
+                      {isFinished && (
+                        <td className="py-2.5 text-right tabular-nums">
+                          {r.totalPoints != null ? (
+                            <span className={
+                              r.totalPoints === 3
+                                ? "font-bold text-green-600 dark:text-green-400"
+                                : r.totalPoints > 0
+                                  ? "font-medium text-blue-600 dark:text-blue-400"
+                                  : "text-zinc-400"
+                            }>
+                              {r.totalPoints > 0 ? `+${r.totalPoints}` : "0"}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-300 dark:text-zinc-600">—</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

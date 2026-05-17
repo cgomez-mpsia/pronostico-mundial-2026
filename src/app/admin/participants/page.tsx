@@ -3,6 +3,8 @@ import { participants, users, tournaments } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { NewParticipantForm } from "./new-participant-form";
+import { ResetPasswordButton } from "./reset-password-button";
+import { TogglePaymentButton } from "./toggle-payment-button";
 
 export default async function AdminParticipantsPage() {
   const tournament = await db.query.tournaments.findFirst({
@@ -46,7 +48,8 @@ export default async function AdminParticipantsPage() {
               <tr className="border-b text-left text-zinc-500">
                 <th className="pb-2 pr-4 font-medium">Nombre</th>
                 <th className="pb-2 pr-4 font-medium">Email</th>
-                <th className="pb-2 font-medium">Pago</th>
+                <th className="pb-2 pr-4 font-medium">Pago</th>
+                <th className="pb-2 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -54,12 +57,25 @@ export default async function AdminParticipantsPage() {
                 <tr key={r.participantId}>
                   <td className="py-2 pr-4">{r.fullName}</td>
                   <td className="py-2 pr-4 text-zinc-500">{r.email}</td>
-                  <td className="py-2">
+                  <td className="py-2 pr-4">
                     {r.hasPaid ? (
                       <Badge variant="default">Pagado</Badge>
                     ) : (
                       <Badge variant="secondary">Pendiente</Badge>
                     )}
+                  </td>
+                  <td className="py-2">
+                    <div className="flex gap-1">
+                      <TogglePaymentButton
+                        participantId={r.participantId}
+                        hasPaid={r.hasPaid}
+                        fullName={r.fullName}
+                      />
+                      <ResetPasswordButton
+                        participantId={r.participantId}
+                        fullName={r.fullName}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
