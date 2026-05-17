@@ -44,7 +44,7 @@ npx drizzle-kit generate
 # Drizzle: aplicar migraciones
 npx drizzle-kit migrate
 
-# Reset completo de la DB (DESTRUCTIVO): borra todo, crea admin, torneo, 48 equipos y 104 partidos
+# Reset completo de la DB (DESTRUCTIVO): borra todo, crea admin + lo inscribe como participante (hasPaid=true), torneo, 48 equipos y 104 partidos
 SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... npm run db:setup
 
 # Solo insertar partidos (requiere torneo y equipos ya cargados)

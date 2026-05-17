@@ -13,7 +13,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
-import { users, tournaments, teams } from "./schema";
+import { users, tournaments, teams, participants } from "./schema";
 import { seedMatches } from "./seed-matches";
 
 const adminEmail = process.env.SEED_ADMIN_EMAIL;
@@ -147,28 +147,40 @@ async function setup() {
 
   // 5. Crear torneo
   console.log("▶ Insertando torneo...");
-  await db.insert(tournaments).values({
-    name: "Pronóstico Mundial 2026",
-    inscriptionFee: "500.00",
-    status: "draft",
-    championApplied: false,
-  });
+  const [tournament] = await db
+    .insert(tournaments)
+    .values({
+      name: "Pronóstico Mundial 2026",
+      inscriptionFee: "500.00",
+      status: "draft",
+      championApplied: false,
+    })
+    .returning({ id: tournaments.id });
   console.log("  ✓ tournaments insertado.");
 
-  // 6. Insertar 48 equipos
+  // 6. Inscribir admin como participante (hasPaid = true)
+  console.log("▶ Inscribiendo admin como participante...");
+  await db.insert(participants).values({
+    userId: adminId,
+    tournamentId: tournament.id,
+    hasPaid: true,
+  });
+  console.log("  ✓ Admin inscrito.");
+
+  // 7. Insertar 48 equipos
   console.log("▶ Insertando 48 equipos...");
   await db.insert(teams).values(TEAMS);
   console.log("  ✓ 48 equipos insertados.");
 
-  // 7. Insertar 104 partidos
-  console.log("▶ Obteniendo IDs de equipos y torneo...");
-  const [tournament] = await db.select({ id: tournaments.id }).from(tournaments).limit(1);
+  // 8. Insertar 104 partidos
+  console.log("▶ Obteniendo IDs de equipos...");
   const teamRows = await db.select({ id: teams.id, name: teams.name }).from(teams);
   const teamsByName: Record<string, string> = {};
   for (const t of teamRows) teamsByName[t.name] = t.id;
 
   console.log("▶ Insertando 104 partidos...");
   await seedMatches(db, tournament.id, teamsByName);
+
   console.log("  ✓ 104 partidos insertados.");
 
   await pool.end();
