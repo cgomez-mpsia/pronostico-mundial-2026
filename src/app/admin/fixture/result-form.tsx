@@ -192,6 +192,7 @@ export function ResultForm({
           value={home}
           placeholder="—"
           onChange={(e) => handleScoreChange(setHome, e.target.value)}
+          onFocus={(e) => e.target.select()}
           className="w-12 rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-center text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800"
         />
         <span className="text-zinc-400">—</span>
@@ -203,6 +204,7 @@ export function ResultForm({
           value={away}
           placeholder="—"
           onChange={(e) => handleScoreChange(setAway, e.target.value)}
+          onFocus={(e) => e.target.select()}
           className="w-12 rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-center text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800"
         />
         {!showExtraSection && (

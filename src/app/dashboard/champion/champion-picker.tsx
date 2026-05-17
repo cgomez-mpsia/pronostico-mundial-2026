@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -22,6 +23,7 @@ export function ChampionPicker({ allTeams, currentChampionId, locked }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null); // nombre del equipo guardado
+  const router = useRouter();
 
   const currentChampion = allTeams.find((t) => t.id === currentChampionId);
   const selectedTeam = allTeams.find((t) => t.id === selected);
@@ -50,6 +52,7 @@ export function ChampionPicker({ allTeams, currentChampionId, locked }: Props) {
     setSaved(data.teamName);
     setConfirming(false);
     setSelected(null);
+    router.refresh();
   }
 
   if (locked) {

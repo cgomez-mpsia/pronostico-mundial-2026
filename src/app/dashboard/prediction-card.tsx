@@ -181,6 +181,7 @@ export function PredictionCard({
                   value={home}
                   disabled={saving}
                   onChange={(e) => setHome(Number(e.target.value))}
+                  onFocus={(e) => e.target.select()}
                   className="w-14 rounded-lg border border-zinc-300 bg-zinc-50 px-2 py-1.5 text-center text-lg font-semibold tabular-nums dark:border-zinc-600 dark:bg-zinc-800 disabled:opacity-50"
                 />
                 <span className="text-zinc-400 font-semibold">—</span>
@@ -192,6 +193,7 @@ export function PredictionCard({
                   value={away}
                   disabled={saving}
                   onChange={(e) => setAway(Number(e.target.value))}
+                  onFocus={(e) => e.target.select()}
                   className="w-14 rounded-lg border border-zinc-300 bg-zinc-50 px-2 py-1.5 text-center text-lg font-semibold tabular-nums dark:border-zinc-600 dark:bg-zinc-800 disabled:opacity-50"
                 />
               </div>

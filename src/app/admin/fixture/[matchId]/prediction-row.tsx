@@ -82,6 +82,7 @@ export function PredictionRow({
                 type="number" min={0} max={99} value={home}
                 disabled={loading}
                 onChange={(e) => setHome(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
                 className="w-12 rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-center text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 disabled:opacity-50"
               />
               <span className="text-zinc-400">—</span>
@@ -89,6 +90,7 @@ export function PredictionRow({
                 type="number" min={0} max={99} value={away}
                 disabled={loading}
                 onChange={(e) => setAway(Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
                 className="w-12 rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-center text-sm tabular-nums dark:border-zinc-600 dark:bg-zinc-800 disabled:opacity-50"
               />
             </span>
