@@ -10,6 +10,7 @@ import { MatchForm, type Team } from "./match-form";
 
 const STAGE_LABELS: Record<string, string> = {
   group: "Fase de Grupos",
+  r32: "Dieciseisavos de Final",
   r16: "Octavos de Final",
   qf: "Cuartos de Final",
   sf: "Semifinales",
@@ -17,7 +18,7 @@ const STAGE_LABELS: Record<string, string> = {
   final: "Final",
 };
 
-const STAGE_ORDER = ["group", "r16", "qf", "sf", "third", "final"];
+const STAGE_ORDER = ["group", "r32", "r16", "qf", "sf", "third", "final"];
 
 export type MatchRow = {
   matchId: string;
@@ -30,6 +31,8 @@ export type MatchRow = {
   awayTeamId: string | null;
   homeTeamName: string | null;
   awayTeamName: string | null;
+  extraTime: string | null;
+  matchWinnerId: string | null;
 };
 
 type EditingState = { matchId: string } & MatchRow;
@@ -197,10 +200,15 @@ export function FixtureClient({ tournamentName, matches, teams }: Props) {
                   </div>
                   <ResultForm
                     matchId={m.matchId}
+                    stage={m.stage}
+                    homeTeamId={m.homeTeamId}
+                    awayTeamId={m.awayTeamId}
                     homeTeamName={m.homeTeamName ?? "Por definir"}
                     awayTeamName={m.awayTeamName ?? "Por definir"}
                     currentHomeScore={m.homeScore}
                     currentAwayScore={m.awayScore}
+                    currentExtraTime={m.extraTime}
+                    currentMatchWinnerId={m.matchWinnerId}
                     isFinished={m.status === "finished"}
                   />
                 </div>

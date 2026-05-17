@@ -19,6 +19,7 @@ function formatBOT(date: Date) {
 
 const STAGE_LABELS: Record<string, string> = {
   group: "Fase de Grupos",
+  r32: "Dieciseisavos de Final",
   r16: "Octavos de Final",
   qf: "Cuartos de Final",
   sf: "Semifinales",

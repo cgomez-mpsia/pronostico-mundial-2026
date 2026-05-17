@@ -23,6 +23,7 @@
 |---------|------------|-----------------|--------------------------------------|
 | 0.1     | 2026-05-15 | Alberto Gomez   | Borrador inicial basado en reglas del cliente y documento de invitación |
 | 0.2     | 2026-05-16 | Alberto Gomez   | v1 implementada y en producción. Agregadas US-018..025: gestión de fixture, puntos de campeón, desglose de puntos, vista del pozo, perfil de participante y partidos eliminatorios TBD y página de reglas (US-026). US-027..029: sidebar, settings y configuración del torneo. US-030: detalle de partido |
+| 0.3     | 2026-05-17 | Alberto Gomez   | Nuevas US-031..034: resultado completo en eliminatoria (a.e.t./pen.), fixture con banderas y agrupación por jornada, tabla de clasificación de grupos. US-035 pendiente de análisis: auto-bracket eliminatorio. REQ-058..065 correspondientes. |
 
 ---
 
@@ -1343,6 +1344,127 @@ Feature: Página de detalle de partido
 
 ---
 
+#### PRD-US-031: Ver resultado completo de partido eliminatorio (Participante)
+
+**Como** participante,
+**quiero** ver si un partido eliminatorio se decidió en tiempo extra o penales, y quién ganó,
+**para** entender el desenlace del partido sin confundir el marcador de 90 minutos (el que cuenta para mi pronóstico) con el resultado final.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Resultado completo en eliminatoria
+
+  Scenario: Partido eliminatorio decidido en penales
+    Given que el partido "Argentina vs Francia" terminó 1-1 en 90 minutos
+    And se decidió en penales ganando Argentina
+    When veo el partido en el fixture o en la página de detalle
+    Then veo el marcador "1 - 1" con el badge "pen."
+    And veo que Argentina es el equipo ganador del partido
+
+  Scenario: Partido eliminatorio decidido en tiempo extra
+    Given que el partido "España vs Alemania" terminó 1-1 en 90 minutos
+    And España marcó en el minuto 104, terminando 2-1 en tiempo extra
+    When veo el partido en el fixture o en la página de detalle
+    Then veo el marcador "1 - 1" con el badge "a.e.t."
+    And veo que España es el equipo ganador del partido
+
+  Scenario: Los puntos se calculan sobre el marcador de 90 minutos
+    Given que yo pronostiqué 1-1 para el partido "Argentina vs Francia"
+    And el partido terminó 1-1 en 90 minutos y Argentina ganó en penales
+    Then recibo 3 puntos (resultado acertado + score exacto)
+    And el badge "pen." no afecta mis puntos
+
+  Scenario: Admin registra resultado con tiempo extra
+    Given que soy admin y el partido "Argentina vs Francia" terminó
+    When ingreso el marcador 1-1 (90 min) para un partido eliminatorio
+    Then el sistema muestra: "¿Cómo se decidió el partido? [Tiempo extra | Penales]"
+    And selecciono "Penales" y el equipo ganador "Argentina"
+    Then el resultado queda registrado con badge "pen." y ganador Argentina
+```
+
+**Reglas de negocio referenciadas:** BR-023, BR-011, RB-03
+**Prioridad:** Alta | **Story Points:** 3
+
+---
+
+#### PRD-US-032: Ver fixture con banderas y agrupado por jornada (Participante)
+
+**Como** participante,
+**quiero** ver el fixture con las banderas de los equipos y los partidos agrupados por día,
+**para** identificar los equipos rápidamente y encontrar fácilmente los partidos de cada jornada.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Fixture enriquecido
+
+  Scenario: Ver fixture con banderas
+    Given que el fixture tiene partidos cargados
+    When abro la página del fixture
+    Then cada partido muestra la bandera del equipo local y del visitante junto a su nombre
+    And los partidos están agrupados por fecha (hora Bolivia)
+    And cada grupo de fecha tiene un encabezado con el día y la fecha (ej. "jueves 11 junio 2026")
+
+  Scenario: Identificar grupo de un partido en fase de grupos
+    Given que el partido "México vs Sudáfrica" pertenece al Grupo A
+    When veo ese partido en el fixture
+    Then veo la etiqueta "Grupo A" junto a la información del partido
+```
+
+**Reglas de negocio referenciadas:** BR-024
+**Prioridad:** Media | **Story Points:** 2
+
+---
+
+#### PRD-US-033: Ver tabla de clasificación de grupos (Participante)
+
+**Como** participante,
+**quiero** ver la tabla de clasificación de cada grupo con puntos, goles a favor, diferencia de goles y posición,
+**para** saber qué equipos clasifican a la fase eliminatoria y contextualizar mis pronósticos.
+
+**Criterios de Aceptación:**
+
+```gherkin
+Feature: Tabla de clasificación de grupos
+
+  Scenario: Ver clasificación de grupos con partidos jugados
+    Given que en el Grupo A se han jugado 2 partidos
+    When abro la vista "Ver grupos"
+    Then veo una tabla por cada grupo (A al L) con columnas: Pos, Equipo, PJ, G, E, P, GF, GC, DG, Pts
+    And los equipos están ordenados por Pts (desc) → DG (desc) → GF (desc)
+    And cada equipo muestra su bandera
+
+  Scenario: Ver clasificación con todos los grupos en cero
+    Given que no se ha jugado ningún partido
+    When abro la vista "Ver grupos"
+    Then veo las tablas con todos los equipos en 0 puntos, ordenados alfabéticamente
+
+  Scenario: Equipo con partidos jugados
+    Given que México ganó 2-1 a Sudáfrica
+    When veo el Grupo A
+    Then México aparece primero con: PJ=1, G=1, E=0, P=0, GF=2, GC=1, DG=+1, Pts=3
+    And Sudáfrica aparece con: PJ=1, G=0, E=0, P=1, GF=1, GC=2, DG=-1, Pts=0
+```
+
+**Reglas de negocio referenciadas:** BR-025
+**Prioridad:** Media | **Story Points:** 5
+
+---
+
+#### PRD-US-034: Auto-bracket eliminatorio *(Análisis pendiente — v2)*
+
+**Como** admin,
+**quiero** que el sistema proponga automáticamente los emparejamientos de R32 al terminar la fase de grupos,
+**para** evitar errores manuales al asignar los 32 clasificados a los 16 partidos de dieciseisavos.
+
+> **Estado:** Pendiente de análisis. Requiere estudiar y hardcodear la tabla de distribución de terceros de la FIFA 2026 (reglas para qué grupos avanza su 3er lugar a qué bracket de R32). El admin puede asignar los equipos manualmente en v1.
+
+**Reglas de negocio referenciadas:** BR-026
+**Prioridad:** Could Have — v2
+
+---
+
 ## 8. Requerimientos Funcionales
 
 | ID          | Descripción                                                                                                   | US Relacionadas              | Prioridad |
@@ -1544,6 +1666,14 @@ Feature: Página de detalle de partido
 | PRD-REQ-055 | `app/dashboard/champion/page.tsx` · Server Component · check de `matchRows.length === 0` |
 | PRD-REQ-056 | `app/dashboard/prediction-card.tsx` · `app/admin/fixture/[matchId]/page.tsx` · atributos HTML en inputs |
 | PRD-REQ-057 | `app/api/admin/results/route.ts` · validación Zod · `app/admin/fixture/[matchId]/page.tsx` · botón deshabilitado si algún campo vacío |
+| PRD-REQ-058 | El sistema debe permitir registrar si un partido eliminatorio se decidió en tiempo extra (`aet`) o penales (`pen`) y el equipo ganador final. Esto no modifica `homeScore`/`awayScore` ni el cálculo de puntos. | PRD-US-031 | Alta |
+| PRD-REQ-059 | El fixture debe mostrar banderas de equipos (`teams.flag_url`) junto a los nombres y agrupar los partidos por fecha (hora BOT). | PRD-US-032 | Media |
+| PRD-REQ-060 | Los partidos de fase de grupos deben mostrar la etiqueta de grupo (Grupo A, B, etc.) derivada de `teams.group_name`. | PRD-US-032 | Media |
+| PRD-REQ-061 | Debe existir una vista "Ver grupos" accesible desde el fixture que muestre la tabla de clasificación de todos los grupos calculada en tiempo real desde los resultados registrados. | PRD-US-033 | Media |
+| PRD-REQ-062 | El orden en la tabla de grupos debe seguir criterios FIFA: Pts → DG → GF → resultado directo. En caso de igualdad total, orden alfabético como fallback. | PRD-US-033 | Media |
+| PRD-REQ-063 | El formulario de registro de resultado (admin) debe mostrar campos de tiempo extra y equipo ganador condicionalmente, solo cuando el partido es de fase eliminatoria y los scores son iguales. | PRD-US-031 | Alta |
+| PRD-REQ-064 | La vista de detalle de partido y el fixture deben mostrar el badge `(pen.)` o `(a.e.t.)` cuando corresponda, junto al marcador de 90 minutos. | PRD-US-031 | Alta |
+| PRD-REQ-065 | *(v2)* El sistema debe proponer automáticamente los emparejamientos de R32 basándose en la tabla de distribución de terceros de la FIFA 2026, requiriendo confirmación del admin. | PRD-US-034 | Could Have |
 
 ---
 

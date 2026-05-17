@@ -15,6 +15,20 @@
       "when": 1778972822865,
       "tag": "0001_skinny_kat_farrell",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778990474480,
+      "tag": "0002_fat_sauron",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778991989392,
+      "tag": "0003_familiar_zaran",
+      "breakpoints": true
     }
   ]
 }

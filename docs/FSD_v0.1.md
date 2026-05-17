@@ -7,9 +7,9 @@
 |---|---|
 | **Proyecto** | Pronóstico Mundial 2026 |
 | **Documento** | Functional Specification Document (FSD) |
-| **Versión** | 0.2 |
+| **Versión** | 0.4 |
 | **Estado** | En desarrollo — v1 en producción |
-| **Fecha** | 2026-05-16 |
+| **Fecha** | 2026-05-17 |
 | **Autor** | Alberto Gomez |
 | **Revisado por** | Pendiente |
 | **Aprobado por** | Pendiente |
@@ -22,6 +22,8 @@
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | 0.1 | 2026-05-15 | Alberto Gomez | Documento inicial — borrador completo |
+| 0.4 | 2026-05-17 | Alberto Gomez | Nuevos FSD-UC-020 (tabla de clasificación de grupos) y FSD-UC-021 (fixture con banderas y agrupación por jornada). FSD-UC-004 actualizado: registro de tiempo extra y penales en eliminatorias (campos `extra_time` + `match_winner_id` en schema). Glosario y trazabilidad actualizados. |
+| 0.3 | 2026-05-17 | Alberto Gomez | Seed de los 104 partidos del Mundial 2026 implementado (`src/db/seed-matches.ts`). Nueva etapa `r32` (Dieciseisavos de Final) añadida al schema, CHECK constraint actualizado, STAGE_LABELS/STAGE_ORDER/STAGE_OPTIONS actualizados en todos los componentes. Migración `drizzle/0002_fat_sauron.sql` generada. Setup completo (`db:setup`) ahora incluye los 104 partidos automáticamente. |
 | 0.2 | 2026-05-16 | Alberto Gomez | Actualización post-implementación v1: FSD-UC-007 a FSD-UC-011 (gestión de fixture, puntos de campeón, desglose de puntos, distribución del pozo, foto de perfil). FSD-UC-012..013: perfil público y privado del participante. avatar_url en users. Trazabilidad actualizada (BR-011..016). BR-017: gestión de partidos eliminatorios TBD con alerta de deadline. FSD-UC-014: página de reglas del torneo (contenido estático, BR-018). FSD-UC-015..017: sidebar/layout, settings del participante, configuración del torneo admin. FSD-UC-018: detalle de partido. Decisiones técnicas globales de UI (toasts, empty states, loading states, form errors/warnings, Realtime suscripciones, páginas de error globales). FSD-UC-019: admin home. Gaps ronda 1: email_confirm, standings hasPaid, champion sin fixture, inputs mobile, score null. Gaps ronda 2: champion_points en participants (no en match_points), Realtime en matches → router.refresh(), políticas RLS completas, inventario Route Handlers, error.tsx y not-found.tsx. Gaps ronda 3: tournaments.champion_applied en modelo de datos, CHECK constraint DB en match_points, standings como query dinámica (no vista materializada), routing /profile/[userId] sin ambigüedad, creación de torneo por seed no por UI. Gaps ronda 4: GET /api/standings en inventario, POST /api/predictions body con participantId opcional para admin, tournaments.champion_applied_at para UI "aplicado el [fecha]", has_paid en standings query para badge admin, seed de usuario admin junto al seed del torneo. |
 
 ---
@@ -365,7 +367,7 @@ Feature: Tabla de posiciones en tiempo real
 
 ### FSD-UC-004 — Admin Registra Resultado y Dispara Cálculo de Puntos
 
-**Descripción:** El admin ingresa el marcador oficial de un partido terminado (solo 90 minutos reglamentarios) y el sistema calcula automáticamente los puntos para todos los participantes.
+**Descripción:** El admin ingresa el marcador oficial de un partido terminado (solo 90 minutos reglamentarios) y el sistema calcula automáticamente los puntos para todos los participantes. Para partidos eliminatorios que se decidan más allá de los 90 minutos, el admin también registra si fue tiempo extra o penales y el equipo ganador.
 
 **Actor primario:** Admin
 
@@ -375,27 +377,28 @@ Feature: Tabla de posiciones en tiempo real
 - El partido ha concluido sus 90 minutos reglamentarios.
 
 **Postcondiciones:**
-- El partido actualiza su estado a `finished` con `home_score` y `away_score` registrados.
-- Para cada participante inscrito en el torneo, se crea o actualiza un registro en `match_points` con `result_points` y `exact_points` calculados.
+- El partido actualiza su estado a `finished` con `home_score`, `away_score`, y opcionalmente `extra_time` y `match_winner_id`.
+- Para cada participante inscrito en el torneo, se crea o actualiza un registro en `match_points` con `result_points` y `exact_points` calculados (siempre basado en `home_score`/`away_score` de 90 min).
 - La tabla de posiciones se actualiza automáticamente vía Realtime.
 
 **Flujo Principal:**
 
 1. El admin navega al panel de administración → sección "Fixture".
 2. El admin selecciona el partido terminado.
-3. El admin ingresa el marcador oficial: goles equipo local y goles equipo visitante.
-4. El admin presiona "Registrar resultado y calcular puntos".
-5. El sistema actualiza el partido: `status = 'finished'`, `home_score`, `away_score`.
-6. El sistema recupera todas las predicciones de ese partido.
-7. Para los participantes sin predicción, el sistema usa internamente `home_score = 0, away_score = 0, is_manually_entered = false`.
-8. El sistema ejecuta el motor de puntos (`lib/points.ts`) para cada predicción:
+3. El admin ingresa el marcador oficial a los **90 minutos**: goles equipo local y goles equipo visitante.
+4. **[Solo para partidos eliminatorios (stage ≠ `group`)]** Si los scores son iguales, el sistema muestra un paso adicional: "¿Cómo se decidió el partido?" con opciones `[Tiempo extra | Penales]` + selector del equipo ganador. Si los scores son distintos, este paso no aparece.
+5. El admin presiona "Registrar resultado y calcular puntos".
+6. El sistema actualiza el partido: `status = 'finished'`, `home_score`, `away_score`. Si aplica: `extra_time = 'aet'|'pen'`, `match_winner_id`.
+7. El sistema recupera todas las predicciones de ese partido.
+8. Para los participantes sin predicción, el sistema usa internamente `home_score = 0, away_score = 0, is_manually_entered = false`.
+9. El sistema ejecuta el motor de puntos (`lib/points.ts`) para cada predicción — **siempre sobre el marcador de 90 min, nunca sobre el resultado de tiempo extra o penales:**
    - Determina el resultado real (local gana / empate / visitante gana).
    - Determina el resultado pronosticado.
    - Si coincide el resultado: `result_points = 1`.
    - Si coincide el score exacto Y `is_manually_entered = true`: `exact_points = 2`.
    - `total_points = result_points + exact_points`.
-9. El sistema inserta/actualiza registros en `match_points` para cada participante.
-10. El sistema confirma la operación al admin: "Resultado registrado. Puntos calculados para N participantes."
+10. El sistema inserta/actualiza registros en `match_points` para cada participante.
+11. El sistema confirma la operación al admin: "Resultado registrado. Puntos calculados para N participantes."
 
 **Flujos Alternativos:**
 
@@ -406,6 +409,8 @@ Feature: Tabla de posiciones en tiempo real
 | UC004-A3 | El admin ingresa un resultado incorrecto | El admin puede corregir el resultado. El sistema recalcula y sobreescribe `match_points`. |
 | UC004-A4 | Error en el cálculo (excepción) | El sistema registra el error en logs, revierte la transacción y muestra mensaje de error al admin. |
 | UC004-A5 | Admin envía el formulario con un solo score o sin scores | Client-side: el botón "Registrar resultado" permanece deshabilitado hasta que ambos campos tienen valor. Server-side: el Route Handler valida que ambos valores sean enteros ≥ 0; si no, retorna HTTP 400 con mensaje "Ambos scores son requeridos." |
+| UC004-A6 | Partido eliminatorio termina con scores iguales pero admin no selecciona desempate | Client-side: el botón permanece deshabilitado hasta completar el campo de desempate. |
+| UC004-A7 | Partido eliminatorio con scores distintos (ganador claro en 90 min) | No aparece el paso de desempate. `extra_time = null`, `match_winner_id = null`. El ganador es evidente por el marcador. |
 
 **Criterios de Aceptación (Gherkin):**
 
@@ -447,9 +452,25 @@ Feature: Registro de resultado y cálculo de puntos
     When el admin corrige el resultado a 1-0
     Then el sistema recalcula match_points para todos los participantes del partido
     And los nuevos valores sobreescriben los anteriores
+
+  Scenario: Partido eliminatorio decidido en penales
+    Given el partido Argentina vs Francia es eliminatorio y terminó 1-1 en 90 minutos
+    And el participante Juan pronosticó 1-1
+    When el admin registra score 1-1, selecciona "Penales" y ganador "Argentina"
+    Then matches.extra_time = 'pen' y matches.match_winner_id = id de Argentina
+    And Juan recibe 3 puntos (1-1 acertado + score exacto) — los penales no afectan los puntos
+    And en la UI el partido muestra "1 - 1 (pen.)" con Argentina como ganador
+
+  Scenario: Partido eliminatorio decidido en tiempo extra
+    Given el partido España vs Alemania es eliminatorio y terminó 1-1 en 90 minutos
+    And España marcó en el minuto 104 (2-1 en tiempo extra)
+    When el admin registra score 1-1 (90 min), selecciona "Tiempo extra" y ganador "España"
+    Then matches.extra_time = 'aet' y matches.match_winner_id = id de España
+    And en la UI el partido muestra "1 - 1 (a.e.t.)" con España como ganador
+    And los puntos se calculan sobre 1-1, no sobre 2-1
 ```
 
-**Referencias:** PRD-REQ-008, PRD-REQ-009, PRD-REQ-010, BR-005, BR-006, BR-007, NFR-001
+**Referencias:** PRD-REQ-008, PRD-REQ-009, PRD-REQ-010, PRD-REQ-058, PRD-REQ-063, PRD-REQ-064, BR-005, BR-006, BR-007, BR-023, NFR-001
 
 ---
 
@@ -1897,6 +1918,109 @@ Esto activa el teclado numérico en iOS y Android sin necesidad de que el usuari
 
 ---
 
+### FSD-UC-020 — Ver Tabla de Clasificación de Grupos
+
+**Descripción:** El participante accede a una vista de clasificación de grupos que muestra la tabla de posiciones de cada uno de los 12 grupos (A–L) calculada en tiempo real desde los resultados registrados.
+
+**Actor primario:** Participante (también visible para Admin)
+
+**Precondiciones:**
+- El usuario está autenticado.
+- El torneo tiene estado `active` o `finished`.
+
+**Postcondiciones:** ninguna (vista de solo lectura).
+
+**Flujo Principal:**
+
+1. El usuario está en la página del fixture y presiona "Ver grupos".
+2. El sistema calcula para cada equipo de cada grupo, desde los partidos con `stage = 'group'` y `status = 'finished'`:
+   - **PJ:** partidos jugados
+   - **G:** victorias (team score > rival score)
+   - **E:** empates
+   - **P:** derrotas
+   - **GF:** goles a favor
+   - **GC:** goles en contra
+   - **DG:** diferencia de goles (GF − GC)
+   - **Pts:** G×3 + E×1
+3. El sistema ordena cada tabla aplicando criterios FIFA en cascada: Pts desc → DG desc → GF desc → resultado directo (cabeza a cabeza: Pts, DG, GF en partidos mutuos) → orden alfabético como último fallback.
+4. La UI muestra las 12 tablas de grupos con: posición, bandera, nombre del equipo, PJ, G, E, P, GF, GC, DG, Pts.
+5. Los primeros 2 de cada grupo aparecen resaltados visualmente como "clasificados" una vez que el grupo ha completado sus 3 jornadas.
+
+**Flujos Alternativos:**
+
+| Código | Condición | Respuesta del sistema |
+|---|---|---|
+| UC020-A1 | No se ha jugado ningún partido | Todas las tablas muestran los equipos con 0 en todas las columnas, ordenados alfabéticamente. |
+| UC020-A2 | Grupo con jornadas incompletas | La tabla muestra el estado parcial sin marcar clasificados aún. |
+
+**Decisiones técnicas:**
+- La clasificación se calcula con una query server-side sobre `matches` JOIN `teams` — no requiere tabla materializada.
+- La lógica de desempate por resultado directo requiere sub-queries o cómputo en memoria; por simplicidad en v1 se puede omitir el desempate por resultado directo y usar solo Pts → DG → GF → alfabético.
+
+**Criterios de Aceptación (Gherkin):**
+
+```gherkin
+Feature: Tabla de clasificación de grupos
+
+  Scenario: Ver clasificación con partidos jugados
+    Given que México ganó 2-1 a Sudáfrica y Corea del Sur empató 1-1 con Chequia (Grupo A)
+    When abro la vista "Ver grupos"
+    Then veo el Grupo A con:
+      | Pos | Equipo        | PJ | G | E | P | GF | GC | DG | Pts |
+      | 1   | México        |  1 | 1 | 0 | 0 |  2 |  1 | +1 |   3 |
+      | 2   | Corea del Sur |  1 | 0 | 1 | 0 |  1 |  1 |  0 |   1 |
+      | 2   | Chequia       |  1 | 0 | 1 | 0 |  1 |  1 |  0 |   1 |
+      | 4   | Sudáfrica     |  1 | 0 | 0 | 1 |  1 |  2 | -1 |   0 |
+
+  Scenario: Grupo sin partidos jugados
+    When abro la vista "Ver grupos" antes de que empiece el torneo
+    Then veo todos los equipos con PJ=0, G=0, E=0, P=0, GF=0, GC=0, DG=0, Pts=0
+```
+
+**Referencias:** PRD-REQ-061, PRD-REQ-062, BR-025
+
+---
+
+### FSD-UC-021 — Fixture con Banderas y Agrupación por Jornada
+
+**Descripción:** La página del fixture muestra los partidos agrupados por fecha (hora Bolivia), con las banderas de los equipos y la etiqueta de grupo para partidos de fase de grupos.
+
+**Actor primario:** Participante (también visible para Admin)
+
+**Precondiciones:**
+- El usuario está autenticado.
+- El fixture tiene partidos cargados.
+
+**Flujo Principal:**
+
+1. El usuario accede a `/dashboard` (fixture del participante).
+2. Los partidos se agrupan por fecha en BOT. Cada grupo de fecha tiene un encabezado ("jueves 11 junio 2026").
+3. Cada partido muestra:
+   - Bandera + nombre del equipo local
+   - Hora del partido (BOT)
+   - Bandera + nombre del equipo visitante
+   - Para `stage = 'group'`: etiqueta del grupo (ej. "Grupo A")
+   - Estado: marcador si `status = 'finished'` (con badge `(pen.)`/`(a.e.t.)` si aplica), o plazo de cierre si abierto
+4. Un botón "Ver grupos" abre la vista de clasificación (FSD-UC-020).
+
+**Decisiones técnicas:**
+- Las banderas se obtienen del campo `teams.flag_url` (ya disponible en la query de partidos).
+- El grupo se deriva de `teams.group_name` del equipo local (ambos equipos del mismo grupo en fase de grupos).
+- Para partidos eliminatorios con `home_team_id = null`, se muestra "Por definir" con un icono placeholder en lugar de bandera.
+- El badge `(pen.)`/`(a.e.t.)` se renderiza cuando `matches.extra_time` no es `null`.
+
+**Display de resultado con tiempo extra:**
+
+| `extra_time` | `match_winner_id` | Display |
+|---|---|---|
+| `null` | `null` | "2 - 1" (normal) |
+| `'pen'` | equipo X | "1 - 1 · (pen.) → Equipo X" |
+| `'aet'` | equipo X | "1 - 1 · (a.e.t.) → Equipo X" |
+
+**Referencias:** PRD-REQ-059, PRD-REQ-060, PRD-REQ-064, BR-024
+
+---
+
 ## 5. Reglas de Negocio
 
 | ID | Regla | Descripción | Caso especial |
@@ -2090,9 +2214,11 @@ El admin configura nombre y estado desde `/admin/settings` (FSD-UC-017) una vez 
 | `home_score` | `integer` | SI | Goles del equipo local en 90 minutos. `null` hasta que el admin registra el resultado. |
 | `away_score` | `integer` | SI | Goles del equipo visitante en 90 minutos. `null` hasta que el admin registra el resultado. |
 | `status` | `text` | NO | Estado del partido: `scheduled`, `live`, `finished`. Default: `scheduled`. |
-| `stage` | `text` | NO | Fase del torneo: `group`, `r16`, `qf`, `sf`, `third`, `final`. |
+| `stage` | `text` | NO | Fase del torneo: `group`, `r32`, `r16`, `qf`, `sf`, `third`, `final`. |
+| `extra_time` | `text` | SI | Cómo se decidió el partido más allá de los 90 min. `'aet'` = gol en tiempo extra; `'pen'` = tanda de penales. `null` si se decidió en 90 min regulares. Solo aplica a partidos eliminatorios. |
+| `match_winner_id` | `uuid` | SI | FK → `teams.id`. Equipo ganador del partido. Se establece cuando `extra_time` no es `null` (el ganador no es evidente solo por el marcador de 90 min). `null` cuando el ganador es claro por diferencia de goles en 90 min. |
 
-**Restricciones:** `status` debe ser uno de: `scheduled`, `live`, `finished`. **Nota v1:** El estado `live` está definido en el schema para uso futuro pero no se usa en v1 — los partidos pasan directamente de `scheduled` a `finished` cuando el admin registra el resultado. `stage` debe ser uno de: `group`, `r16`, `qf`, `sf`, `third`, `final`.
+**Restricciones:** `status` debe ser uno de: `scheduled`, `live`, `finished`. **Nota v1:** El estado `live` está definido en el schema para uso futuro pero no se usa en v1 — los partidos pasan directamente de `scheduled` a `finished` cuando el admin registra el resultado. `stage` debe ser uno de: `group`, `r32`, `r16`, `qf`, `sf`, `third`, `final`. `extra_time` debe ser uno de: `'aet'`, `'pen'` (o `null`). `match_winner_id` solo se establece cuando `extra_time` no es `null`.
 
 ---
 
@@ -2388,10 +2514,10 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 | **`match_points`** | Tabla que almacena los puntos obtenidos por cada participante en cada partido. Es la fuente de verdad para el cálculo de standings. |
 | **`deadline_at`** | Campo en `matches`. Timestamp exacto (en UTC) en que cierra la ventana de pronósticos para ese partido. Calculado como el día anterior al partido a las 15:00 BOT (19:00 UTC). |
 | **Fixture** | Lista completa de partidos del torneo con sus fechas, equipos y estados. |
-| **Stage** | Fase del torneo a la que pertenece un partido: `group` (fase de grupos), `r16` (octavos de final), `qf` (cuartos de final), `sf` (semifinales), `third` (tercer puesto), `final`. |
+| **Stage** | Fase del torneo a la que pertenece un partido: `group` (fase de grupos), `r32` (dieciseisavos de final), `r16` (octavos de final), `qf` (cuartos de final), `sf` (semifinales), `third` (tercer puesto), `final`. |
 
 ---
 
-*Fin del documento — FSD v0.2 — Pronóstico Mundial 2026 — Casos de uso documentados: FSD-UC-001 a FSD-UC-019*
+*Fin del documento — FSD v0.4 — Pronóstico Mundial 2026 — Casos de uso documentados: FSD-UC-001 a FSD-UC-021*
 
-*Generado: 2026-05-15 | Actualizado: 2026-05-16 | Próxima revisión: antes del inicio de la implementación de FSD-UC-007 a FSD-UC-019*
+*Generado: 2026-05-15 | Actualizado: 2026-05-17 | Próxima revisión: antes de implementar FSD-UC-020 y FSD-UC-021*

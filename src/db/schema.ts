@@ -87,10 +87,15 @@ export const matches = pgTable(
     awayScore: integer("away_score"),
     status: text("status").notNull().default("scheduled"),
     stage: text("stage").notNull(),
+    // null = decidido en 90 min · 'aet' = tiempo extra · 'pen' = penales · BR-023
+    extraTime: text("extra_time"),
+    // equipo ganador cuando extraTime no es null · BR-023
+    matchWinnerId: uuid("match_winner_id").references(() => teams.id),
   },
   (t) => [
     check("matches_status_check", sql`${t.status} IN ('scheduled', 'live', 'finished')`),
-    check("matches_stage_check", sql`${t.stage} IN ('group', 'r16', 'qf', 'sf', 'third', 'final')`),
+    check("matches_stage_check", sql`${t.stage} IN ('group', 'r32', 'r16', 'qf', 'sf', 'third', 'final')`),
+    check("matches_extra_time_check", sql`${t.extraTime} IS NULL OR ${t.extraTime} IN ('aet', 'pen')`),
   ]
 );
 

@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const STAGE_OPTIONS = [
   { value: "group", label: "Fase de Grupos" },
+  { value: "r32", label: "Dieciseisavos de Final" },
   { value: "r16", label: "Octavos de Final" },
   { value: "qf", label: "Cuartos de Final" },
   { value: "sf", label: "Semifinales" },

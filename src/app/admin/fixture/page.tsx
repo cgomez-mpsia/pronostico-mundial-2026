@@ -37,6 +37,8 @@ export default async function AdminFixturePage() {
         awayTeamId: matches.awayTeamId,
         homeTeamName: homeTeam.name,
         awayTeamName: awayTeam.name,
+        extraTime: matches.extraTime,
+        matchWinnerId: matches.matchWinnerId,
       })
       .from(matches)
       .leftJoin(homeTeam, eq(matches.homeTeamId, homeTeam.id))

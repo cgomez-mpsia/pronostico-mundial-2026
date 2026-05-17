@@ -1,0 +1,2 @@
+ALTER TABLE "matches" DROP CONSTRAINT "matches_stage_check";--> statement-breakpoint
+ALTER TABLE "matches" ADD CONSTRAINT "matches_stage_check" CHECK ("matches"."stage" IN ('group', 'r32', 'r16', 'qf', 'sf', 'third', 'final'));

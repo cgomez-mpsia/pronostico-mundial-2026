@@ -43,6 +43,12 @@ npx drizzle-kit generate
 
 # Drizzle: aplicar migraciones
 npx drizzle-kit migrate
+
+# Reset completo de la DB (DESTRUCTIVO): borra todo, crea admin, torneo, 48 equipos y 104 partidos
+SEED_ADMIN_EMAIL=... SEED_ADMIN_PASSWORD=... npm run db:setup
+
+# Solo insertar partidos (requiere torneo y equipos ya cargados)
+npm run db:seed-matches
 ```
 
 ---
@@ -59,6 +65,8 @@ src/
   db/                   # Drizzle ORM: schema y cliente
     schema.ts           # Definición de tablas
     index.ts            # Cliente Drizzle conectado a Supabase
+    setup.ts            # Reset completo + seed (DESTRUCTIVO)
+    seed-matches.ts     # 104 partidos del Mundial 2026 (exporta seedMatches())
   lib/                  # Utilidades y lógica de negocio
     points.ts           # Motor de cálculo de puntos (función pura)
     prizes.ts           # Lógica de distribución del pozo (función pura)
@@ -116,3 +124,5 @@ src/
 - Las fechas límite se calculan en **hora boliviana (BOT, UTC-4)** — usar siempre `America/La_Paz`.
 - `lib/points.ts` y `lib/prizes.ts` son **funciones puras** — sin I/O, sin efectos secundarios.
 - **RLS habilitado** en todas las tablas de Supabase. El cliente Drizzle del servidor usa `service_role`.
+- Las etapas válidas de un partido son: `group`, `r32`, `r16`, `qf`, `sf`, `third`, `final` — hay CHECK constraint en DB.
+- Horarios de partidos almacenados en UTC; la UI convierte a BOT (`America/La_Paz`). `deadlineAt` = día anterior al partido (en BOT) a las 19:00 UTC (= 15:00 BOT).

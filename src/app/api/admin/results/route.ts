@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. Parsear body
-  const { matchId, homeScore, awayScore } = await request.json();
+  const { matchId, homeScore, awayScore, extraTime, matchWinnerId } = await request.json();
 
   if (
     !matchId ||
@@ -38,14 +38,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   }
 
+  const validExtraTime = extraTime === null || extraTime === undefined || ["aet", "pen"].includes(extraTime);
+  if (!validExtraTime) {
+    return NextResponse.json({ error: "Valor de tiempo extra inválido." }, { status: 400 });
+  }
+  if (extraTime && !matchWinnerId) {
+    return NextResponse.json({ error: "Debes indicar el equipo ganador." }, { status: 400 });
+  }
+  if (!extraTime && matchWinnerId) {
+    return NextResponse.json({ error: "matchWinnerId requiere extraTime." }, { status: 400 });
+  }
+
   // 3. Verificar que el partido existe
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, tournamentId: true, status: true },
+    columns: { id: true, tournamentId: true, status: true, stage: true },
   });
 
   if (!match) {
     return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
+  }
+
+  if (match.stage === "group" && extraTime) {
+    return NextResponse.json({ error: "Los partidos de fase de grupos no pueden tener tiempo extra." }, { status: 400 });
   }
 
   // 4. Obtener todos los participantes del torneo
@@ -77,7 +92,13 @@ export async function POST(request: NextRequest) {
     // Actualizar el partido
     await tx
       .update(matches)
-      .set({ homeScore, awayScore, status: "finished" })
+      .set({
+        homeScore,
+        awayScore,
+        status: "finished",
+        extraTime: extraTime ?? null,
+        matchWinnerId: matchWinnerId ?? null,
+      })
       .where(eq(matches.id, matchId));
 
     // Calcular y upsert match_points para cada participante

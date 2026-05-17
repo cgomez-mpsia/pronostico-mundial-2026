@@ -12,13 +12,18 @@ interface Prediction {
 interface Props {
   matchId: string;
   homeTeamName: string;
+  homeTeamFlagUrl: string | null;
   awayTeamName: string;
+  awayTeamFlagUrl: string | null;
+  groupLabel: string | null;
   scheduledAtLabel: string;
   deadlineAtLabel: string;
   isOpen: boolean;
   matchStatus: string;
   matchHomeScore: number | null;
   matchAwayScore: number | null;
+  extraTime: string | null;
+  matchWinnerName: string | null;
   prediction: Prediction | null;
   hasPaid: boolean;
 }
@@ -26,17 +31,21 @@ interface Props {
 export function PredictionCard({
   matchId,
   homeTeamName,
+  homeTeamFlagUrl,
   awayTeamName,
+  awayTeamFlagUrl,
+  groupLabel,
   scheduledAtLabel,
   deadlineAtLabel,
   isOpen,
   matchStatus,
   matchHomeScore,
   matchAwayScore,
+  extraTime,
+  matchWinnerName,
   prediction,
   hasPaid,
 }: Props) {
-
   const [home, setHome] = useState(prediction?.homeScore ?? 0);
   const [away, setAway] = useState(prediction?.awayScore ?? 0);
   const [saving, setSaving] = useState(false);
@@ -66,20 +75,42 @@ export function PredictionCard({
     setTimeout(() => setSaved(false), 3000);
   }
 
+  const extraTimeBadge =
+    extraTime === "pen" ? "pen." : extraTime === "aet" ? "a.e.t." : null;
+
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Equipos */}
-      <div className="flex items-center justify-between gap-4">
-        <span className="flex-1 text-right text-sm font-medium">{homeTeamName}</span>
+      {/* Equipos con banderas */}
+      <div className="flex items-center gap-2">
+        {/* Local */}
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+          <span className="truncate text-sm font-medium">{homeTeamName}</span>
+          {homeTeamFlagUrl && (
+            <img
+              src={homeTeamFlagUrl}
+              alt=""
+              className="h-4 w-6 shrink-0 rounded-sm object-cover"
+            />
+          )}
+        </div>
 
+        {/* Score / inputs */}
         {matchStatus === "finished" ? (
-          <span className="text-lg font-bold tabular-nums">
-            {matchHomeScore} — {matchAwayScore}
-          </span>
+          <div className="flex shrink-0 flex-col items-center">
+            <span className="text-lg font-bold tabular-nums">
+              {matchHomeScore} — {matchAwayScore}
+            </span>
+            {extraTimeBadge && (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                {extraTimeBadge}
+              </span>
+            )}
+          </div>
         ) : isOpen ? (
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <input
               type="number"
+              inputMode="numeric"
               min={0}
               max={99}
               value={home}
@@ -89,6 +120,7 @@ export function PredictionCard({
             <span className="text-zinc-400">—</span>
             <input
               type="number"
+              inputMode="numeric"
               min={0}
               max={99}
               value={away}
@@ -97,19 +129,39 @@ export function PredictionCard({
             />
           </div>
         ) : (
-          <span className="text-sm text-zinc-500">
+          <span className="shrink-0 text-sm text-zinc-500">
             {prediction
               ? `${prediction.homeScore} — ${prediction.awayScore}`
-              : "No pronosticó"}
+              : "—"}
           </span>
         )}
 
-        <span className="flex-1 text-left text-sm font-medium">{awayTeamName}</span>
+        {/* Visitante */}
+        <div className="flex min-w-0 flex-1 items-center justify-start gap-1.5">
+          {awayTeamFlagUrl && (
+            <img
+              src={awayTeamFlagUrl}
+              alt=""
+              className="h-4 w-6 shrink-0 rounded-sm object-cover"
+            />
+          )}
+          <span className="truncate text-sm font-medium">{awayTeamName}</span>
+        </div>
       </div>
 
-      {/* Info de fecha y plazo */}
+      {/* Ganador en eliminatoria (cuando hay a.e.t. o pen.) */}
+      {matchStatus === "finished" && extraTimeBadge && matchWinnerName && (
+        <p className="mt-1 text-center text-[11px] text-zinc-500">
+          Avanza: <span className="font-medium">{matchWinnerName}</span>
+        </p>
+      )}
+
+      {/* Info de fecha, plazo y grupo */}
       <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-xs text-zinc-400">
-        <span>{scheduledAtLabel}</span>
+        <span>
+          {groupLabel && <span className="mr-1 font-medium">{groupLabel} ·</span>}
+          {scheduledAtLabel}
+        </span>
         {matchStatus === "scheduled" && (
           <span>Cierra: {deadlineAtLabel}</span>
         )}
