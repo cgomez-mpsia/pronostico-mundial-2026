@@ -18,6 +18,9 @@ import { seedMatches } from "./seed-matches";
 
 const adminEmail = process.env.SEED_ADMIN_EMAIL;
 const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+const adminName = process.env.SEED_ADMIN_NAME ?? "Organizador";
+const tournamentName = process.env.SEED_TOURNAMENT_NAME ?? "Polla Mundial 2026";
+const inscriptionFee = process.env.SEED_INSCRIPTION_FEE ?? "20.00";
 
 if (!adminEmail || !adminPassword) {
   console.error("Faltan SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD.");
@@ -140,7 +143,7 @@ async function setup() {
   await db.insert(users).values({
     id: adminId,
     email: adminEmail!,
-    fullName: "Organizador",
+    fullName: adminName,
     role: "admin",
   });
   console.log("  ✓ users insertado.");
@@ -150,8 +153,8 @@ async function setup() {
   const [tournament] = await db
     .insert(tournaments)
     .values({
-      name: "Pronóstico Mundial 2026",
-      inscriptionFee: "500.00",
+      name: tournamentName,
+      inscriptionFee: inscriptionFee,
       status: "draft",
       championApplied: false,
     })

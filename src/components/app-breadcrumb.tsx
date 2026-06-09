@@ -22,6 +22,7 @@ function getCrumbs(pathname: string): Crumb[] {
     if (segments[1] === "standings") return [{ label: "Tabla de Posiciones" }];
     if (segments[1] === "champion") return [{ label: "Mi Campeón" }];
     if (segments[1] === "grupos") return [{ label: "Grupos" }];
+    if (segments[1] === "hoy") return [{ label: "Hoy" }];
     if (segments[1] === "matches") {
       if (segments.length === 2) return [{ label: "Fixture" }];
       return [{ label: "Fixture", href: "/dashboard" }, { label: "Partido" }];

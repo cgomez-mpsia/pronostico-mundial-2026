@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  Flame,
   Trophy,
   Star,
   BookOpen,
@@ -44,6 +45,7 @@ interface AppSidebarProps {
 
 const participantNav = [
   { href: "/dashboard", label: "Fixture", icon: CalendarDays },
+  { href: "/dashboard/hoy", label: "Hoy", icon: Flame },
   { href: "/dashboard/standings", label: "Tabla de Posiciones", icon: Trophy },
   { href: "/dashboard/champion", label: "Mi Campeón", icon: Star },
   { href: "/reglas", label: "Reglas", icon: BookOpen },
