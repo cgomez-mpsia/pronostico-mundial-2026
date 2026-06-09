@@ -11,7 +11,7 @@ export default async function AdminParticipantsPage() {
       eq(tournaments.status, "active"),
       eq(tournaments.status, "draft")
     ),
-    columns: { id: true, name: true },
+    columns: { id: true, name: true, inscriptionFee: true },
   });
 
   const championTeam = alias(teams, "champion_team");
@@ -43,7 +43,7 @@ export default async function AdminParticipantsPage() {
         )}
       </div>
 
-      <NewParticipantForm />
+      <NewParticipantForm inscriptionFee={tournament?.inscriptionFee} />
 
       {!tournament && (
         <p className="text-sm text-red-500">

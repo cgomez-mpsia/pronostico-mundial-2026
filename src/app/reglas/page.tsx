@@ -1,9 +1,22 @@
-export default function ReglasPage() {
+import { db } from "@/db";
+import { tournaments } from "@/db/schema";
+import { eq, or } from "drizzle-orm";
+
+export default async function ReglasPage() {
+  const tournament = await db.query.tournaments.findFirst({
+    where: or(eq(tournaments.status, "active"), eq(tournaments.status, "draft")),
+    columns: { name: true, inscriptionFee: true },
+  });
+
+  const fee = tournament?.inscriptionFee
+    ? Number(tournament.inscriptionFee).toLocaleString("es-BO")
+    : "—";
+
   return (
     <div className="space-y-8 p-6 lg:p-8 max-w-2xl">
       <div>
         <h1 className="text-2xl font-semibold">Reglas del Torneo</h1>
-        <p className="text-sm text-zinc-500">Pronóstico Mundial 2026</p>
+        {tournament && <p className="text-sm text-zinc-500">{tournament.name}</p>}
       </div>
 
       <section className="space-y-3">
@@ -11,7 +24,7 @@ export default function ReglasPage() {
           Inscripción
         </h2>
         <ul className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
-          <li>Cuota fija de <strong>Bs. 500</strong> por participante.</li>
+          <li>Cuota fija de <strong>Bs. {fee}</strong> por participante.</li>
           <li>No hay límite de participantes.</li>
           <li>Una vez inscrito no es posible retirarse — la cuota no se devuelve.</li>
         </ul>

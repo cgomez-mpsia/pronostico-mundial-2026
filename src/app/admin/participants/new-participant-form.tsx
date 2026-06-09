@@ -21,7 +21,7 @@ interface SuccessData {
   password: string;
 }
 
-export function NewParticipantForm() {
+export function NewParticipantForm({ inscriptionFee }: { inscriptionFee?: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<SuccessData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -105,7 +105,7 @@ export function NewParticipantForm() {
           <div className="flex items-center gap-2">
             <Checkbox id="hasPaid" name="hasPaid" defaultChecked disabled={loading} />
             <Label htmlFor="hasPaid" className="cursor-pointer">
-              Pago de Bs. 500 confirmado
+              Pago de Bs. {inscriptionFee ? Number(inscriptionFee).toLocaleString("es-BO") : "—"} confirmado
             </Label>
           </div>
 
