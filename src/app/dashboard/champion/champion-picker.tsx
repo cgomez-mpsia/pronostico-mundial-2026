@@ -60,7 +60,7 @@ export function ChampionPicker({ allTeams, currentChampionId, locked }: Props) {
       <div className="space-y-3">
         <Alert>
           <AlertDescription>
-            El torneo ya inició. No puedes cambiar tu elección.
+            Los cuartos de final ya iniciaron. No puedes cambiar tu elección.
           </AlertDescription>
         </Alert>
         {currentChampion ? (
@@ -81,7 +81,7 @@ export function ChampionPicker({ allTeams, currentChampionId, locked }: Props) {
         <p className="text-sm">
           ¿Confirmas que tu campeón es{" "}
           <span className="font-semibold">{selectedTeam.name}</span>? Esta
-          elección será pública y no podrá cambiarse una vez iniciado el torneo.
+          elección será pública y no podrá cambiarse una vez iniciados los cuartos de final.
         </p>
         {error && (
           <Alert variant="destructive">

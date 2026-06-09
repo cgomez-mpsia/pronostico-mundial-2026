@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, participants, tournaments, teams, matches } from "@/db/schema";
-import { eq, or, asc } from "drizzle-orm";
+import { eq, or, asc, and } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -40,16 +40,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No hay torneo activo." }, { status: 400 });
   }
 
-  // Verificar que el torneo no ha iniciado (primer partido en el futuro)
-  const firstMatch = await db.query.matches.findFirst({
-    where: eq(matches.tournamentId, tournament.id),
+  // Bloqueado cuando el deadline del primer partido de cuartos ya pasó
+  const firstQFMatch = await db.query.matches.findFirst({
+    where: and(
+      eq(matches.tournamentId, tournament.id),
+      eq(matches.stage, "qf")
+    ),
     orderBy: asc(matches.scheduledAt),
-    columns: { scheduledAt: true },
+    columns: { deadlineAt: true },
   });
 
-  if (firstMatch && firstMatch.scheduledAt <= new Date()) {
+  if (firstQFMatch?.deadlineAt && firstQFMatch.deadlineAt <= new Date()) {
     return NextResponse.json(
-      { error: "El torneo ya inició. No puedes cambiar tu elección." },
+      { error: "Los cuartos de final ya iniciaron. No puedes cambiar tu elección." },
       { status: 403 }
     );
   }
