@@ -9,7 +9,7 @@ Hemos creado una **plataforma exclusiva** para que disfrutes de cada partido, si
 
 ## 💰 El Gran Pozo
 
-- **Cuota única de inscripción:** Bs. 500.
+- **Cuota única de inscripción:** Oro. 50.000.
 - **El Premio:** ¡Todo lo recaudado va directo al pozo! 
   - Si somos 8 personas o menos, el primer lugar se lleva el **100% del pozo** (¡Todo o nada!).
   - Si somos más de 8 participantes, repartimos la gloria: **75% para el primer lugar** y **25% para el segundo lugar**. 
@@ -21,8 +21,8 @@ Hemos creado una **plataforma exclusiva** para que disfrutes de cada partido, si
 ## 📱 ¿Cómo funciona nuestra App Exclusiva?
 
 Olvídate de los Excel aburridos y los mensajes perdidos. Contamos con nuestra propia **aplicación dedicada** para el torneo:
-- **Pronósticos a un toque:** Ingresa tus pronósticos desde tu celular. Tienes hasta la **23:59 del día anterior** a cada partido para cambiar de opinión.
-- **Transparencia Total:** Pasadas las 23:59, los pronósticos de **todos se hacen públicos**. ¡Podrás ver a qué le apostaron tus rivales para hacerles la contra!
+- **Pronósticos a un toque:** Ingresa tus pronósticos desde tu celular. Tienes hasta las **15:00 del día anterior** a cada partido para cambiar de opinión.
+- **Transparencia Total:** Pasadas las 15:00, los pronósticos de **todos se hacen públicos**. ¡Podrás ver a qué le apostaron tus rivales para hacerles la contra!
 - **Tabla en Vivo:** El ranking general se actualiza automáticamente con cada partido.
 - **Comunidad VIP:** Tendremos un grupo cerrado de WhatsApp para celebrar, debatir jugadas polémicas y como canal de soporte oficial.
 
@@ -46,7 +46,7 @@ Antes de que ruede el balón en el partido inaugural, deberás jugártela y eleg
 
 ¡No hay límite de cupos, pero debes entrar antes de que empiece la acción! 
 
-1. **Deposita** tu cuota de Bs. 500 al QR proporcionado por la organización.
+1. **Deposita** tu cuota de Oro. 50.000 al PJ proporcionado por la organización.
 2. **Envía tu comprobante** por WhatsApp al organizador.
 3. Recibirás de inmediato tu **Usuario y Contraseña** para acceder a la plataforma y empezar a llenar tus pronósticos.
 

@@ -50,12 +50,29 @@
       "Bash(grep -v \":0$\")",
       "Bash(cat)",
       "Read(//tmp/**)",
-      "Bash(pkill -f \"next dev\")"
+      "Bash(pkill -f \"next dev\")",
+      "Bash(sed -i '' -e 's|¿Son las 15:00 del día anterior?|¿Es medianoche del día del partido?|g' -e 's|Fallback pronóstico\\\\| G\\\\[Recibe pronóstico por WhatsApp antes de las 15:00\\\\]|Fallback pronóstico| G[Recibe pronóstico por WhatsApp antes de medianoche]|g' docs/PRD_v0.1.md)",
+      "Bash(sed -i '' -e 's|\"Cierra: mar, 10 jun, 15:00\"|\"Cierra: mar, 10 jun, 00:00\"|g' -e 's|\"Cierra: mié, 10 jun, 15:00\"|\"Cierra: mié, 10 jun, 00:00\"|g' -e 's|15:00 hora boliviana \\(BOT\\) del día calendario anterior a la fecha del partido|medianoche \\(00:00 BOT\\) del día del partido|g' -e 's|15:00 hora Bolivia \\(BOT, UTC-4\\) del día anterior al partido|medianoche \\(00:00 BOT\\) del día del partido|g' -e 's|plazos \\(15:00 día anterior\\)|plazos \\(medianoche del día del partido\\)|g' -e 's|Bloqueo y publicación automática a las 15:00|Bloqueo y publicación automática a medianoche|g' -e 's|15:00 hora boliviana \\(BOT, UTC-4\\) del día anterior|medianoche \\(00:00 BOT\\) del día del partido|g' docs/BRD_v0.1.md)",
+      "Bash(sed -i '' -e 's|\\(= 15:00 BOT\\)\\\\.|\\(= 00:00 BOT, medianoche\\).|g' -e 's|15:00 BOT \\(19:00 UTC\\)|00:00 BOT \\(04:00 UTC, medianoche\\)|g' -e 's|antes de las \\\\*\\\\*15:00 hora boliviana \\(BOT, UTC-4\\) del día calendario anterior\\\\*\\\\* al partido|antes de la \\\\*\\\\*medianoche \\(00:00 BOT\\) del día del partido\\\\*\\\\*|g' -e 's|el plazo es el día 14 a las 15:00|el plazo es la medianoche del día 15|g' -e 's|después de las 15:00|después de medianoche|g' docs/FSD_v0.1.md)",
+      "Bash(sed -i '' -e 's|las 15:00 hora Bolivia \\(BOT, UTC-4\\) del día anterior al partido|medianoche \\(00:00 BOT\\) del día del partido|g' -e 's|deadline a las 15:00 BOT|deadline a medianoche \\(00:00 BOT\\)|g' -e 's|\"Cierra: mar, 10 jun, 15:00\"|\"Cierra: mar, 10 jun, 00:00\"|g' -e 's|deadline mié 10 jun 15:00|deadline mié 10 jun 00:00|g' -e 's|El plazo de cierre de pronósticos es las 15:00 hora Bolivia \\(BOT, UTC-4\\) del día anterior al partido\\\\.|El plazo de cierre de pronósticos es medianoche \\(00:00 BOT, hora Bolivia UTC-4\\) del día del partido.|g' -e 's|Bloqueo automático 15:00 BOT|Bloqueo automático medianoche BOT \\(00:00\\)|g' -e 's|\"mié, 10 jun, 15:00\" en lugar de \"mié, 10 jun, 03:00 p\\\\. m\\\\.\"|\"mié, 10 jun, 00:00\" en lugar de \"mié, 10 jun, 12:00 a. m.\"|g' docs/PRD_v0.1.md)",
+      "WebFetch(domain:www.fifa.com)",
+      "WebFetch(domain:api.fifa.com)",
+      "WebFetch(domain:www.thestatsapi.com)",
+      "WebFetch(domain:worldcup26.ir)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:www.wc2026api.com)",
+      "WebFetch(domain:api.worldcupjson.net)",
+      "WebFetch(domain:worldcupjson.net)",
+      "Bash(curl -s \"https://api.github.com/repos/openfootball/worldcup.json/contents/2026\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json\" | jq '.matches[] | { *)",
+      "Bash(python3 /tmp/convert_to_utc.py)"
     ],
     "additionalDirectories": [
       "/Users/beto/Workspace/Mundial/.claude/skills",
       "/Users/beto/Workspace/Mundial/src/app/profile",
-      "/Users/beto/Workspace/Mundial/src/app/api/admin/matches"
+      "/Users/beto/Workspace/Mundial/src/app/api/admin/matches",
+      "/tmp"
     ]
   }
 }
