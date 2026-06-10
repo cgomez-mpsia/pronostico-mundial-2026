@@ -21,8 +21,8 @@ Hemos creado una **plataforma exclusiva** para que disfrutes de cada partido, si
 ## 📱 ¿Cómo funciona nuestra App Exclusiva?
 
 Olvídate de los Excel aburridos y los mensajes perdidos. Contamos con nuestra propia **aplicación dedicada** para el torneo:
-- **Pronósticos a un toque:** Ingresa tus pronósticos desde tu celular. Tienes hasta las **15:00 del día anterior** a cada partido para cambiar de opinión.
-- **Transparencia Total:** Pasadas las 15:00, los pronósticos de **todos se hacen públicos**. ¡Podrás ver a qué le apostaron tus rivales para hacerles la contra!
+- **Pronósticos a un toque:** Ingresa tus pronósticos desde tu celular. Tienes hasta la **medianoche del día del partido** a cada partido para cambiar de opinión.
+- **Transparencia Total:** Pasada la medianoche, los pronósticos de **todos se hacen públicos**. ¡Podrás ver a qué le apostaron tus rivales para hacerles la contra!
 - **Tabla en Vivo:** El ranking general se actualiza automáticamente con cada partido.
 - **Comunidad VIP:** Tendremos un grupo cerrado de WhatsApp para celebrar, debatir jugadas polémicas y como canal de soporte oficial.
 

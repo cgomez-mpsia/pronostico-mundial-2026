@@ -96,8 +96,8 @@ src/
 ### Pronósticos
 - Cada participante pronostica el **marcador exacto** de cada partido.
 - Solo cuentan los **90 minutos reglamentarios incluyendo tiempo de descuento** (ej. 90+3, 90+6) — prórroga y penales no cuentan. El marcador oficial es el del **pitido final** (decisión del cliente Opción A, 17-May-2026).
-- Plazo de cierre: **15:00 del día anterior** (hora Bolivia, BOT UTC-4).
-- Pasadas las 15:00, los pronósticos se **publican públicamente** y se **bloquean**.
+- Plazo de cierre: **medianoche del día del partido** (hora Bolivia, BOT UTC-4).
+- Pasada la medianoche, los pronósticos se **publican públicamente** y se **bloquean**.
 - Antes del partido inaugural se elige el **Campeón Mundial** (visible públicamente desde el inicio).
 
 ### Motor de Puntos
@@ -125,4 +125,4 @@ src/
 - `lib/points.ts` y `lib/prizes.ts` son **funciones puras** — sin I/O, sin efectos secundarios.
 - **RLS habilitado** en todas las tablas de Supabase. El cliente Drizzle del servidor usa `service_role`.
 - Las etapas válidas de un partido son: `group`, `r32`, `r16`, `qf`, `sf`, `third`, `final` — hay CHECK constraint en DB.
-- Horarios de partidos almacenados en UTC; la UI convierte a BOT (`America/La_Paz`). `deadlineAt` = día anterior al partido (en BOT) a las 19:00 UTC (= 15:00 BOT).
+- Horarios de partidos almacenados en UTC; la UI convierte a BOT (`America/La_Paz`). `deadlineAt` = medianoche BOT del día del partido = 04:00 UTC de ese mismo día (en BOT).

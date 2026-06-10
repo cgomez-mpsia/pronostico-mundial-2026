@@ -76,7 +76,7 @@ Los participantes pagan una cuota de inscripción de Bs. 500 y compiten pronosti
 | IN-03 | Registro del pago de cuota de inscripción por el admin |
 | IN-04 | Selección del campeón mundial antes del partido inaugural |
 | IN-05 | Ingreso y modificación de pronósticos (marcador exacto) por partido |
-| IN-06 | Cierre automático de pronósticos a las 15:00 del día anterior a cada partido (BOT, UTC-4) |
+| IN-06 | Cierre automático de pronósticos a las medianoche del día de cada partido (BOT, UTC-4) |
 | IN-07 | Publicación automática de pronósticos tras el cierre del plazo |
 | IN-08 | Registro manual de resultados de partidos por el admin |
 | IN-09 | Cálculo automático de puntos tras el registro de resultados |
@@ -154,7 +154,7 @@ Persona responsable de administrar el torneo. También puede participar como jug
 
 Actor no humano que ejecuta comportamientos automáticos:
 
-- Calcula y aplica el plazo de cierre (15:00 BOT del día anterior a cada partido).
+- Calcula y aplica el plazo de cierre (00:00 BOT (medianoche) del día de cada partido).
 - Bloquea la edición de pronósticos al llegar el plazo.
 - Publica automáticamente los pronósticos al llegar el plazo.
 - Asigna 0-0 por defecto a pronósticos no ingresados en el momento de calcular puntos.
@@ -244,7 +244,7 @@ Feature: Inicio de sesión
 **Precondiciones:**
 - El participante está autenticado.
 - El partido tiene estado `scheduled`.
-- La hora actual es anterior al `deadline_at` del partido (15:00 BOT del día anterior).
+- La hora actual es anterior al `deadline_at` del partido (00:00 BOT (medianoche) del día del partido).
 - El participante está inscrito en el torneo activo y tiene `has_paid = true`.
 
 **Postcondiciones:**
@@ -310,7 +310,7 @@ Feature: Ingresar pronóstico
 
   Scenario: Publicación automática de pronósticos al alcanzar el plazo
     Given son las 14:59 BOT y los pronósticos están privados
-    When el reloj alcanza las 15:00 BOT del día anterior al partido
+    When el reloj alcanza las 00:00 BOT (medianoche) del día del partido al partido
     Then todos los pronósticos del partido se hacen visibles para todos los participantes
     And el formulario de edición se desactiva para ese partido
 ```
@@ -863,7 +863,7 @@ Feature: Elección del campeón mundial
 
 **Postcondiciones:**
 - Los partidos creados/editados son inmediatamente visibles para todos los participantes en el fixture.
-- El campo `deadline_at` se recalcula automáticamente como el día anterior al `scheduled_at` a las 15:00 BOT (19:00 UTC).
+- El campo `deadline_at` se recalcula automáticamente como el día anterior al `scheduled_at` a las 00:00 BOT (04:00 UTC, medianoche).
 
 **Flujo Principal — Crear partido:**
 
@@ -871,7 +871,7 @@ Feature: Elección del campeón mundial
 2. El admin presiona "Agregar partido".
 3. El sistema muestra formulario con campos: fase (`stage`), equipo local, equipo visitante, fecha/hora (`scheduled_at`).
 4. El admin completa los campos y presiona "Guardar".
-5. El sistema calcula `deadline_at = día_anterior(scheduled_at) a las 19:00 UTC` (= 15:00 BOT).
+5. El sistema calcula `deadline_at = mismo día del partido a las 04:00 UTC` (= 00:00 BOT, medianoche).
 6. El sistema inserta el registro en `matches` con `status = 'scheduled'`.
 7. El partido aparece en el fixture para todos los usuarios.
 
@@ -940,7 +940,7 @@ Feature: Gestión del fixture por el admin
     When completa fase="group", local="Argentina", visitante="México", fecha="2026-06-15 20:00 BOT"
     And presiona "Guardar"
     Then el partido aparece en el fixture
-    And deadline_at = "2026-06-14 19:00 UTC" (15:00 BOT del día anterior)
+    And deadline_at = "2026-06-15 04:00 UTC" (00:00 BOT (medianoche) del día del partido)
 
   Scenario: Admin edita la fecha de un partido
     Given existe el partido "España vs Alemania" con fecha incorrecta
@@ -1442,7 +1442,7 @@ Feature: Perfil privado del participante
 3. El Server Component renderiza el contenido estático organizado en secciones:
    - **Sistema de puntos:** +1 resultado · +2 score exacto · máx. 3 por partido · solo 90 min.
    - **"No pronosticó":** evaluado como 0-0 internamente; máx. 1 punto si el partido termina 0-0; nunca recibe los +2.
-   - **Plazo de cierre:** 15:00 hora Bolivia (BOT, UTC-4) del día calendario anterior a cada partido. Pasado el plazo, los pronósticos se publican y se bloquean.
+   - **Plazo de cierre:** medianoche (00:00 BOT, hora Bolivia UTC-4) del día de cada partido. Pasado el plazo, los pronósticos se publican y se bloquean.
    - **Campeón Mundial:** elegir antes del partido inaugural; elección pública e irrevocable; +5 puntos si acertás al finalizar el torneo.
    - **Distribución del pozo:** ≤8 participantes → 100% al 1ro; >8 → 75% al 1ro y 25% al 2do; reglas de empate explicadas.
 4. El usuario lee las reglas y puede navegar de vuelta a cualquier sección de la app.
@@ -2328,8 +2328,8 @@ Feature: Tabla de clasificación de grupos
 |---|---|---|---|
 | BR-001 | Cuota de inscripción | La cuota fija de inscripción es **Bs. 500** por participante. | El organizador también paga la cuota si participa. |
 | BR-002 | Sin límite de participantes | No existe un número máximo de participantes por torneo. | La distribución del pozo cambia según el total (ver BR-008). |
-| BR-003 | Plazo de pronósticos | Los pronósticos deben enviarse antes de las **15:00 hora boliviana (BOT, UTC-4) del día calendario anterior** al partido. | Si el partido es el día 15 a las 18:00, el plazo es el día 14 a las 15:00. |
-| BR-004 | Bloqueo y publicación automática | A las 15:00 BOT del día anterior: todos los pronósticos del partido se **publican públicamente** y se **bloquean** (no modificables). Esto ocurre aunque el partido sea ese mismo día más tarde. | El bloqueo es server-side; la UI debe reflejar el estado bloqueado al cargar. |
+| BR-003 | Plazo de pronósticos | Los pronósticos deben enviarse antes de la **medianoche (00:00 BOT) del día del partido**. | Si el partido es el día 15 a las 18:00, el plazo es la medianoche del día 15. |
+| BR-004 | Bloqueo y publicación automática | A las 00:00 BOT (medianoche) del día del partido: todos los pronósticos del partido se **publican públicamente** y se **bloquean** (no modificables). Esto ocurre aunque el partido sea ese mismo día más tarde. | El bloqueo es server-side; la UI debe reflejar el estado bloqueado al cargar. |
 | BR-005 | Pronóstico no ingresado | Si un participante no ingresó pronóstico antes del plazo, el sistema lo evalúa internamente como **0-0** con `is_manually_entered = false`. La UI muestra "**No pronosticó**" en lugar de "0-0". | El participante puede ganar máximo 1 punto (si el partido termina 0-0, acertó el empate pero no el score exacto). |
 | BR-006 | Puntos por resultado | Si el resultado pronosticado (local gana / empate / visitante gana) coincide con el resultado real: **+1 punto**. | Solo cuenta el resultado de los 90 minutos reglamentarios. |
 | BR-007 | Puntos por score exacto | Si el marcador exacto pronosticado coincide con el marcador real Y el pronóstico fue ingresado manualmente (`is_manually_entered = true`): **+2 puntos adicionales**. | Un pronóstico no ingresado con valor 0-0 y partido que termina 0-0 no recibe estos 2 puntos. |
@@ -2512,7 +2512,7 @@ El admin configura nombre y estado desde `/admin/settings` (FSD-UC-017) una vez 
 | `home_team_id` | `uuid` | SI | FK → `teams.id`. Equipo local. `null` para partidos de eliminatorias cuyo fixture aún no está definido. |
 | `away_team_id` | `uuid` | SI | FK → `teams.id`. Equipo visitante. `null` mismo caso. |
 | `scheduled_at` | `timestamptz` | NO | Fecha y hora del partido en UTC. |
-| `deadline_at` | `timestamptz` | NO | Fecha y hora límite para recibir pronósticos. Calculado como el día anterior a `scheduled_at` a las 15:00 BOT (19:00 UTC). |
+| `deadline_at` | `timestamptz` | NO | Fecha y hora límite para recibir pronósticos. Calculado como el día anterior a `scheduled_at` a las 00:00 BOT (04:00 UTC, medianoche). |
 | `home_score` | `integer` | SI | Goles del equipo local en 90 minutos. `null` hasta que el admin registra el resultado. |
 | `away_score` | `integer` | SI | Goles del equipo visitante en 90 minutos. `null` hasta que el admin registra el resultado. |
 | `status` | `text` | NO | Estado del partido: `scheduled`, `live`, `finished`. Default: `scheduled`. |
@@ -2684,7 +2684,7 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 |---|---|---|---|---|---|
 | BR-001 | Cuota Bs. 500 | PRD-REQ-003 | Admin registra pago | FSD-UC-005 | Campo `has_paid` en `participants` |
 | BR-002 | Sin límite participantes | PRD-REQ-003 | Creación de cuentas sin cupo máximo | FSD-UC-005 | Sin restricción numérica en BD |
-| BR-003 | Plazo 15:00 BOT día anterior | PRD-REQ-006 | Cálculo automático de `deadline_at` | FSD-UC-002 | Campo `deadline_at` en `matches`, verificación server-side |
+| BR-003 | Plazo 00:00 BOT día del partido | PRD-REQ-006 | Cálculo automático de `deadline_at` | FSD-UC-002 | Campo `deadline_at` en `matches`, verificación server-side |
 | BR-004 | Bloqueo y publicación al plazo | PRD-REQ-007 | UI se bloquea y pronósticos se publican | FSD-UC-002 | RLS + lógica de visibilidad por `deadline_at` |
 | BR-005 | Pronóstico no ingresado = 0-0 interno | PRD-REQ-009 | Motor de puntos maneja ausencia de pronóstico | FSD-UC-004 | Lógica en `lib/points.ts`, ausencia de fila en `predictions` |
 | BR-006 | +1 por resultado | PRD-REQ-008 | Motor de puntos: resultado | FSD-UC-004 | `result_points` en `match_points` |
@@ -2775,7 +2775,7 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 | ID | Flujo | Pasos | Resultado esperado |
 |---|---|---|---|
 | E2E-001 | Ciclo completo de un partido | Admin crea partido → Participante ingresa pronóstico → Admin registra resultado → Participante ve puntos en standings | Puntos correctos reflejados en tabla en tiempo real |
-| E2E-002 | Pronóstico fuera de plazo | Participante intenta guardar pronóstico después de las 15:00 | Formulario bloqueado, mensaje de error |
+| E2E-002 | Pronóstico fuera de plazo | Participante intenta guardar pronóstico después de medianoche | Formulario bloqueado, mensaje de error |
 | E2E-003 | Visibilidad de pronósticos | Participante A ve pronósticos de B antes y después del plazo | Antes: privados. Después: visibles |
 | E2E-004 | Elección de campeón | Participante elige campeón → Otro participante puede verlo → Admin aplica puntos de campeón al final | +5 puntos en standings para quien acertó |
 | E2E-005 | Fallback WhatsApp | Admin carga pronóstico manualmente para participante → Se registra con `is_manually_entered = true` | Pronóstico cuenta como ingresado manualmente para cálculo de puntos |
@@ -2801,7 +2801,7 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 | **Campeón Mundial** | Equipo elegido por el participante como ganador del torneo. Se elige antes del primer partido del torneo y es público desde ese momento. |
 | **Score exacto** | Marcador exacto al finalizar los 90 minutos reglamentarios. Acertarlo otorga +2 puntos adicionales. |
 | **Resultado** | Outcome del partido: local gana, empate, o visitante gana. Acertarlo otorga +1 punto. |
-| **Plazo** | Fecha y hora límite para ingresar o modificar un pronóstico. Siempre es las 15:00 BOT del día calendario anterior al partido. |
+| **Plazo** | Fecha y hora límite para ingresar o modificar un pronóstico. Siempre es la medianoche BOT (00:00 BOT) del día del partido. |
 | **BOT** | Bolivia Time. Zona horaria UTC-4. Zona horaria oficial del torneo para el cálculo de plazos. |
 | **Pozo** | Suma total de las cuotas de inscripción de todos los participantes con `has_paid = true`. |
 | **Distribución del pozo** | Reparto del pozo entre los ganadores según las reglas BR-012 a BR-015. |
@@ -2816,7 +2816,7 @@ La app tiene como máximo ~100 participantes y un torneo. La query con JOINs ent
 | **RLS** | Row Level Security. Política de seguridad a nivel de fila en PostgreSQL/Supabase que controla qué datos puede leer/escribir cada usuario. |
 | **Route Handler** | Endpoint API de Next.js App Router (`/api/...`). Ejecuta código server-side para operaciones que requieren acceso a la base de datos o verificaciones de seguridad. |
 | **`match_points`** | Tabla que almacena los puntos obtenidos por cada participante en cada partido. Es la fuente de verdad para el cálculo de standings. |
-| **`deadline_at`** | Campo en `matches`. Timestamp exacto (en UTC) en que cierra la ventana de pronósticos para ese partido. Calculado como el día anterior al partido a las 15:00 BOT (19:00 UTC). |
+| **`deadline_at`** | Campo en `matches`. Timestamp exacto (en UTC) en que cierra la ventana de pronósticos para ese partido. Calculado como el día del partido a las 00:00 BOT (04:00 UTC). |
 | **Fixture** | Lista completa de partidos del torneo con sus fechas, equipos y estados. |
 | **Stage** | Fase del torneo a la que pertenece un partido: `group` (fase de grupos), `r32` (dieciseisavos de final), `r16` (octavos de final), `qf` (cuartos de final), `sf` (semifinales), `third` (tercer puesto), `final`. |
 

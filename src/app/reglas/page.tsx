@@ -38,7 +38,7 @@ export default async function ReglasPage() {
           <li>Cada participante pronostica el <strong>marcador exacto</strong> de cada partido.</li>
           <li>Solo cuentan los <strong>90 minutos reglamentarios</strong> — prórroga y penales no se consideran.</li>
           <li>
-            El plazo de cierre es las <strong>15:00 (hora Bolivia)</strong> del día anterior a cada partido.
+            El plazo de cierre es la <strong>medianoche (hora Bolivia)</strong> del día del partido.
             Pasada esa hora los pronósticos se bloquean y se publican públicamente.
           </li>
           <li>

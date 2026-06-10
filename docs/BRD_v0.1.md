@@ -59,7 +59,7 @@ La gestión manual de un torneo de pronósticos durante 64+ partidos a lo largo 
 
 1. **Error humano en el cálculo de puntos:** con múltiples participantes y docenas de partidos, el riesgo de equivocarse en la asignación de puntos es elevado.
 2. **Falta de transparencia:** los participantes no pueden ver el estado real del torneo de forma autónoma.
-3. **Gestión del plazo de pronósticos:** controlar manualmente quién envió su pronóstico antes de las 15:00 del día anterior es complejo y propenso a conflictos.
+3. **Gestión del plazo de pronósticos:** controlar manualmente quién envió su pronóstico antes de las medianoche del día del partido es complejo y propenso a conflictos.
 4. **Distribución del pozo:** las reglas de distribución (empates, umbrales de participantes) son lo suficientemente complejas como para requerir cálculo automatizado y auditable.
 
 ### 3.2 Oportunidad
@@ -109,7 +109,7 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 |---|---|---|
 | **BO-01** | Eliminar la gestión manual del torneo para la fecha de inicio del Mundial (junio 2026), de modo que el 100 % del cálculo de puntos y la distribución del pozo sea automático y auditable. | 0 cálculos manuales de puntos durante el torneo; pozo distribuido por el sistema al final. |
 | **BO-02** | Lograr que el 100 % de los participantes inscritos utilicen la plataforma para ingresar sus pronósticos en al menos el 80 % de los partidos de la fase de grupos. | Tasa de participación ≥ 80 % de partidos con pronóstico ingresado por usuario. |
-| **BO-03** | Garantizar la disponibilidad de la plataforma durante las ventanas críticas de pronósticos (hasta 15:00 del día anterior a cada partido) con un uptime ≥ 99 % en Vercel + Supabase. | Sin incidentes de caída registrados en ventanas críticas; fallback de WhatsApp activado 0 veces por fallo de plataforma. |
+| **BO-03** | Garantizar la disponibilidad de la plataforma durante las ventanas críticas de pronósticos (hasta medianoche del día de cada partido) con un uptime ≥ 99 % en Vercel + Supabase. | Sin incidentes de caída registrados en ventanas críticas; fallback de WhatsApp activado 0 veces por fallo de plataforma. |
 | **BO-04** | Completar el desarrollo y despliegue de la aplicación antes del partido inaugural del Mundial 2026, permitiendo que todos los participantes inscritos elijan su Campeón Mundial antes del primer partido. | App desplegada y accesible; 100 % de inscritos con Campeón elegido antes del partido inaugural. |
 
 ---
@@ -121,10 +121,10 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | ID | Requerimiento | Justificación |
 |---|---|---|
 | **BR-001** | El sistema debe permitir al administrador crear cuentas de usuario manualmente, asignarles credenciales (usuario/contraseña) y gestionar el estado de su inscripción (pago de cuota confirmado / pendiente). | El registro es exclusivamente manual según las reglas del cliente. No existe auto-registro público. |
-| **BR-002** | El sistema debe permitir a cada participante ingresar un pronóstico de marcador exacto (goles local / goles visitante) para cada partido del Mundial, con un plazo de cierre a las 15:00 hora boliviana (BOT, UTC-4) del día anterior al partido. | Es la funcionalidad central del torneo. Sin ella, no existe competencia. |
+| **BR-002** | El sistema debe permitir a cada participante ingresar un pronóstico de marcador exacto (goles local / goles visitante) para cada partido del Mundial, con un plazo de cierre a las medianoche hora boliviana (BOT, UTC-4) del día del partido. | Es la funcionalidad central del torneo. Sin ella, no existe competencia. |
 | **BR-003** | El sistema debe calcular y asignar puntos automáticamente tras registrar el resultado oficial de cada partido, aplicando: +1 por acertar el resultado (V/E/D), +2 adicionales por marcador exacto (solo si el pronóstico fue ingresado manualmente), máximo 3 puntos por partido. | El motor de puntos es el núcleo de la competencia. Debe ser exacto y reproducible. |
 | **BR-004** | El sistema debe tratar el pronóstico no ingresado como 0-0 internamente, mostrando "No pronosticó" en la interfaz. Si el partido termina 0-0, el participante recibe únicamente 1 punto (acertó el empate) pero no los 2 adicionales por marcador exacto. | Regla explícita del cliente para penalizar la omisión de pronósticos sin ser completamente injusta. |
-| **BR-005** | El sistema debe bloquear la edición de pronósticos pasadas las 15:00 del día anterior a cada partido y publicar automáticamente todos los pronósticos de todos los participantes en ese momento. | Garantiza transparencia e impide modificaciones posteriores al conocimiento del plazo. |
+| **BR-005** | El sistema debe bloquear la edición de pronósticos pasadas las medianoche del día de cada partido y publicar automáticamente todos los pronósticos de todos los participantes en ese momento. | Garantiza transparencia e impide modificaciones posteriores al conocimiento del plazo. |
 | **BR-006** | El sistema debe mantener y mostrar públicamente la tabla de posiciones con los puntos acumulados de todos los participantes, actualizada en tiempo real tras registrar cada resultado. | La tabla en tiempo real es el principal driver de engagement del torneo. |
 | **BR-007** | El sistema debe permitir a cada participante seleccionar un equipo como Campeón Mundial antes del partido inaugural. Esta elección debe ser pública desde el momento en que se realiza. Al final del torneo, si el equipo elegido es campeón, el participante recibe +5 puntos. | Regla clave del cliente; aporta un elemento estratégico de alto impacto al torneo. |
 | **BR-008** | El sistema debe calcular y mostrar la distribución del pozo al final del torneo: si hay 8 o menos participantes, 100 % al 1er lugar; si hay más de 8, 75 % al 1er lugar y 25 % al 2do lugar. Debe aplicar las reglas de empate correspondientes. | Regla de negocio central; define cómo se reparte el dinero real del torneo. |
@@ -133,7 +133,7 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 
 | ID | Requerimiento | Justificación |
 |---|---|---|
-| **BR-009** | El administrador debe poder cargar manualmente el pronóstico de un participante desde el panel de administración, con registro de la fuente (fallback de WhatsApp) y timestamp, siempre que sea antes del plazo de las 15:00. | Fallback operativo requerido por el cliente para casos de fallo de la plataforma o problemas de acceso del participante. |
+| **BR-009** | El administrador debe poder cargar manualmente el pronóstico de un participante desde el panel de administración, con registro de la fuente (fallback de WhatsApp) y timestamp, siempre que sea antes del medianoche. | Fallback operativo requerido por el cliente para casos de fallo de la plataforma o problemas de acceso del participante. |
 | **BR-010** | El administrador debe poder crear, editar y gestionar los partidos del fixture desde el panel de administración (fecha, hora, equipos, etapa). | El fixture del Mundial tiene 104 partidos; cargarlo y ajustarlo únicamente por SQL Editor no es operativamente viable. |
 | **BR-011** | El administrador debe poder aplicar los +5 puntos de campeón al finalizar el torneo, indicando qué equipo ganó el Mundial. El sistema debe calcular automáticamente qué participantes aciertan y sumar los puntos. | Cierra el cálculo final del torneo; sin esta acción la clasificación final es incompleta. |
 | **BR-012** | Cada participante debe poder ver el desglose de puntos partido a partido (pronóstico ingresado, resultado oficial, puntos obtenidos) tanto para sí mismo como para los demás participantes (post-deadline). | Transparencia y auditoría: los participantes necesitan verificar que sus puntos fueron calculados correctamente. |
@@ -162,8 +162,8 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | **BR-034** | La página de inicio del admin (`/admin`) debe presentar las estadísticas del torneo en formato de **stat cards** (shadcn/ui block `dashboard-01`): participantes pagados / pendientes, partidos jugados / pendientes de resultado, total de pronósticos ingresados y pozo acumulado. | El admin home actualmente muestra información plana sin jerarquía visual. Las stat cards permiten captar el estado del torneo de un vistazo y actúan como punto de partida para las acciones más urgentes (ej. ver cuántos partidos tienen resultado pendiente). |
 | **BR-035** | La tabla de participantes del admin (`/admin/participants`) debe implementar el patrón **data-table** de shadcn/ui: columnas con ordenamiento por nombre y estado de pago, filtro por "pago pendiente", y menú contextual por fila (`⋮`) con las acciones "Marcar como pagado / pendiente" y "Resetear contraseña". | A medida que el número de participantes crece (estimado 20-50), una lista sin filtros obliga al admin a recorrerla entera para encontrar participantes con pago pendiente. El filtro por pago pendiente es la acción más frecuente del admin durante el período de inscripción. |
 | **BR-037** | La zona del score/inputs de la prediction card debe centrarse matemáticamente mediante **CSS Grid de 3 columnas** (`grid-cols-[1fr_auto_1fr]`): columnas laterales (`1fr`) para el código + bandera de cada equipo, columna central (`auto`) para la hora, el score o los inputs de pronóstico. El centrado debe ser independiente de la longitud de los nombres de equipo. | El layout actual usa `flex justify-center`. Con equipos de nombres asimétricos (ej. "Bosnia y Herzegovina" vs "Canadá"), el score se desplaza visualmente hacia el equipo con nombre más corto. El CSS Grid garantiza que la columna central esté siempre en el centro matemático del card. |
-| **BR-038** | El plazo de cierre del partido en la prediction card debe mostrarse **siempre en formato 24 horas** (ej. "Cierra: mar, 10 jun, 15:00"). La función que genera `deadlineAtLabel` debe pasar `hour12: false` a `Intl.DateTimeFormat`. La zona horaria es siempre BOT (`America/La_Paz`). | La función `formatBOT` usada en `dashboard/page.tsx` para `deadlineAtLabel` no establece `hour12: false`, produciendo "03:00 p. m." en locales en español. El horario del partido ya se formatea correctamente en 24h mediante `formatBOTTime`. La inconsistencia dentro del mismo card genera confusión. |
-| **BR-039** | La línea de metadatos secundaria de la prediction card debe mostrar **únicamente el plazo de cierre** claramente etiquetado ("Cierra: mié, 10 jun, 15:00") para partidos en estado `scheduled`. El horario del partido no debe repetirse en esta línea (ya es el hero visual central del card). | La meta-line actual incluye "Grupo A · 15:00 · Cierra: mié, 10 jun, 03:00 p. m." — el horario 15:00 duplica el hero central cuando el card está colapsado, y carece de sentido cuando el card está abierto (mostrando los inputs). Eliminar la redundancia simplifica la lectura. |
+| **BR-038** | El plazo de cierre del partido en la prediction card debe mostrarse **siempre en formato 24 horas** (ej. "Cierra: mar, 10 jun, 00:00"). La función que genera `deadlineAtLabel` debe pasar `hour12: false` a `Intl.DateTimeFormat`. La zona horaria es siempre BOT (`America/La_Paz`). | La función `formatBOT` usada en `dashboard/page.tsx` para `deadlineAtLabel` no establece `hour12: false`, produciendo "03:00 p. m." en locales en español. El horario del partido ya se formatea correctamente en 24h mediante `formatBOTTime`. La inconsistencia dentro del mismo card genera confusión. |
+| **BR-039** | La línea de metadatos secundaria de la prediction card debe mostrar **únicamente el plazo de cierre** claramente etiquetado ("Cierra: mié, 10 jun, 00:00") para partidos en estado `scheduled`. El horario del partido no debe repetirse en esta línea (ya es el hero visual central del card). | La meta-line actual incluye "Grupo A · 15:00 · Cierra: mié, 10 jun, 03:00 p. m." — el horario 15:00 duplica el hero central cuando el card está colapsado, y carece de sentido cuando el card está abierto (mostrando los inputs). Eliminar la redundancia simplifica la lectura. |
 | **BR-040** | La etiqueta de etapa del partido ("Primera fase", "Octavos de Final", etc.) **no debe repetirse dentro del cuerpo de la prediction card** cuando el fixture ya muestra esa etapa como encabezado de sección. Para partidos eliminatorios donde el encabezado de sección no sea visible como contexto inmediato, puede mantenerse como dato secundario en la meta-line. | Mostrar "Primera fase" en cada card de una sección titulada "Primera fase" duplica información y consume espacio visual. En el fixture agrupado por etapa/jornada, el encabezado provee el contexto necesario. |
 | **BR-041** | El botón "Guardar pronóstico" de la prediction card debe tener un **peso visual reducido**: `size="sm"`, alineado a la derecha del área de acción, sin ser full-width. El indicador de carga (`isPending`) se mantiene con spinner dentro del botón. | Con hasta 104 prediction cards en el fixture, un botón full-width de fondo sólido en cada card satura visualmente la página y compite con los CTAs de navegación. Los botones de acción en listas largas deben ser compactos y discretos. |
 | **BR-042** | La prediction card debe mostrar un **indicador visual de pronóstico guardado** (ej. ícono de check o texto "Guardado") cuando el participante ya tiene un pronóstico activo para ese partido. El indicador debe ser visible en el estado colapsado del card sin necesidad de expandirlo. El indicador no aplica a partidos con deadline vencido (ahí el card muestra los valores bloqueados). | Con 104 partidos en el fixture, el participante no puede saber de un vistazo cuáles tienen pronóstico guardado. Actualmente debe expandir cada card para verificarlo — esto genera fricción y aumenta el riesgo de pronósticos olvidados. |
@@ -186,7 +186,7 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 
 | ID | Requerimiento | Justificación |
 |---|---|---|
-| **BR-010** | El sistema podría enviar notificaciones o recordatorios (por email o similar) a los participantes que aún no han ingresado su pronóstico antes del plazo de las 15:00. | Reduce la tasa de pronósticos no ingresados (que perjudica la competitividad). No es bloqueante para el torneo. |
+| **BR-010** | El sistema podría enviar notificaciones o recordatorios (por email o similar) a los participantes que aún no han ingresado su pronóstico antes del medianoche. | Reduce la tasa de pronósticos no ingresados (que perjudica la competitividad). No es bloqueante para el torneo. |
 
 ---
 
@@ -197,7 +197,7 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | **RB-01** | La cuota de inscripción es fija en Bs. 500 por participante. No hay variaciones ni descuentos. El pozo total es la suma de todas las cuotas pagadas. | REGLAS §1 |
 | **RB-02** | Un participante inscrito no puede retirarse del torneo. Si abandona, pierde su cuota de Bs. 500 y no tiene derecho a devolución alguna. | REGLAS §1 |
 | **RB-03** | Solo cuentan los 90 minutos reglamentarios de cada partido, incluyendo el tiempo de descuento (tiempo añadido, p.ej. minutos 90+1 a 90+6). El marcador oficial para pronósticos es el marcador **al pitido final**, incluidos los goles en tiempo de descuento. La prórroga (30 min extra en eliminatoria) y los tiros penales no se consideran. Esto aplica a todos los partidos, incluidos los de fase eliminatoria. **Decisión del cliente: Opción A confirmada el 17-May-2026** — el tiempo de descuento es parte del tiempo reglamentario; el admin ingresa un único marcador (el del pitido final). | REGLAS §2 |
-| **RB-04** | El plazo para ingresar o modificar un pronóstico es las 15:00 hora Bolivia (BOT, UTC-4) del día calendario anterior a la fecha del partido. Pasado ese plazo, los pronósticos se bloquean y se publican. | REGLAS §2 |
+| **RB-04** | El plazo para ingresar o modificar un pronóstico es la medianoche (00:00 BOT, hora Bolivia UTC-4) del día del partido. Pasado ese plazo, los pronósticos se bloquean y se publican. | REGLAS §2 |
 | **RB-05** | Un pronóstico no ingresado antes del plazo se evalúa como 0-0. Si el resultado final (a 90 min) es 0-0, el participante recibe únicamente 1 punto por acertar el resultado de empate; no recibe los 2 puntos adicionales por marcador exacto, ya que no ingresó el pronóstico de forma intencional. | REGLAS §2 |
 | **RB-06** | La elección del Campeón Mundial debe realizarse antes del inicio del partido inaugural del torneo. Una vez realizada, es pública e irrevocable. Al terminar el torneo, si el equipo elegido es campeón, el participante suma +5 puntos a su total. | REGLAS §2 |
 | **RB-07** | Distribución del pozo según número de participantes inscritos: (a) 8 o menos: 100 % al 1er lugar. (b) Más de 8: 75 % al 1er lugar y 25 % al 2do lugar. | REGLAS §4 |
@@ -229,7 +229,7 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | R-01 | **Stack tecnológico fijo:** Next.js 15 + TypeScript, Tailwind CSS + shadcn/ui, Supabase, Drizzle ORM, TanStack Query, Vercel. No se pueden sustituir estas tecnologías sin aprobación del cliente. |
 | R-02 | **Sin registro público:** La aplicación no permite que los participantes se registren por su cuenta. El administrador crea todas las cuentas manualmente. |
 | R-03 | **Sin procesamiento de pagos:** La plataforma no gestiona cobros ni transferencias. El control de pagos de cuotas es responsabilidad del organizador, quien marca manualmente cada cuenta como "cuota pagada". |
-| R-04 | **Zona horaria fija:** Todos los plazos (15:00 día anterior) se calculan en hora Bolivia (BOT, UTC-4). El sistema debe respetar esta zona horaria independientemente del servidor o del huso horario del usuario. |
+| R-04 | **Zona horaria fija:** Todos los plazos (medianoche del día del partido) se calculan en hora Bolivia (BOT, UTC-4). El sistema debe respetar esta zona horaria independientemente del servidor o del huso horario del usuario. |
 | R-05 | **Aplicación privada:** No es un producto público. No requiere SEO, registro abierto, páginas de marketing ni integración con redes sociales. |
 | R-06 | **Sin integración con API de resultados deportivos en v1:** Los resultados de cada partido son ingresados manualmente por el administrador. |
 | R-07 | **Presupuesto y tiempo limitados:** El proyecto debe completarse antes del partido inaugural del Mundial 2026. Las funcionalidades se priorizan según MoSCoW. |
@@ -246,7 +246,7 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 - Módulo de pronósticos: ingreso de marcador exacto por partido, con validación de plazo.
 - Selector de Campeón Mundial (antes del partido inaugural, público desde el momento de la elección).
 - Motor de cálculo de puntos: +1 resultado, +2 marcador exacto, +5 campeón, regla 0-0 por defecto.
-- Publicación automática de pronósticos a las 15:00 del día anterior a cada partido.
+- Publicación automática de pronósticos a las medianoche del día de cada partido.
 - Tabla de posiciones en tiempo real (Supabase Realtime).
 - Vista de detalle de partidos: pronósticos de todos los participantes (post-publicación).
 - Cálculo y visualización de la distribución del pozo al final del torneo.
@@ -293,12 +293,12 @@ El Mundial 2026 es el evento deportivo más visto del planeta. Un torneo de pron
 | ID | Riesgo | Probabilidad | Impacto | Mitigación |
 |---|---|---|---|---|
 | **RK-01** | El administrador olvida ingresar el resultado de un partido a tiempo, retrasando la actualización de la tabla de posiciones. | Media | Alto | Implementar notificaciones internas en el panel de admin; procedimiento claro de operación post-partido. |
-| **RK-02** | Un participante no puede acceder a la plataforma antes del plazo de las 15:00 (fallo de internet, credenciales olvidadas). | Media | Medio | Canal de WhatsApp como fallback oficial; el admin puede cargar el pronóstico manualmente antes del plazo. |
+| **RK-02** | Un participante no puede acceder a la plataforma antes del medianoche (fallo de internet, credenciales olvidadas). | Media | Medio | Canal de WhatsApp como fallback oficial; el admin puede cargar el pronóstico manualmente antes del plazo. |
 | **RK-03** | El fixture oficial del Mundial 2026 sufre cambios de horario o reprogramaciones por la FIFA. | Baja | Alto | El admin debe poder editar fechas y horarios de partidos desde el panel de administración; el sistema recalcula los plazos automáticamente. |
 | **RK-04** | La plataforma (Vercel/Supabase) experimenta caída justo antes del cierre de pronósticos a las 15:00. | Baja | Alto | Plan de fallback documentado: participantes envían pronóstico por WhatsApp; el admin los carga manualmente cuando se restablezca el servicio. |
 | **RK-05** | El desarrollo no queda listo antes del partido inaugural del Mundial, impidiendo que los participantes elijan su Campeón Mundial. | Baja-Media | Muy Alto | Priorizar en desarrollo: auth + pronóstico de campeón + pronóstico de partidos de fase de grupos (funcionalidades críticas). Tabla de posiciones y panel completo pueden desplegarse en iteraciones posteriores pero antes del inicio del torneo. |
 | **RK-06** | Disputas entre participantes por la interpretación de reglas de empate o del caso del pronóstico 0-0 no ingresado. | Media | Medio | Las reglas de negocio están documentadas y son visibles en la plataforma. El sistema aplica las reglas de forma consistente y auditable. Se recomienda que el cliente comunique las reglas antes del inicio del torneo. |
-| **RK-07** | Un participante intenta manipular su pronóstico después del plazo de las 15:00. | Baja | Alto | El sistema bloquea la edición a nivel de aplicación y de base de datos (RLS en Supabase). Los logs de auditoría permiten verificar cualquier intento. |
+| **RK-07** | Un participante intenta manipular su pronóstico después del medianoche. | Baja | Alto | El sistema bloquea la edición a nivel de aplicación y de base de datos (RLS en Supabase). Los logs de auditoría permiten verificar cualquier intento. |
 
 ---
 
@@ -309,10 +309,10 @@ La siguiente tabla mapea los requerimientos de negocio de este BRD a las seccion
 | ID BRD | Requerimiento de negocio | Módulo PRD | Sección FSD |
 |---|---|---|---|
 | **BR-001** | Gestión manual de cuentas por el administrador | Gestión de Usuarios | FSD §Administración de Usuarios: flujo de creación, roles, credenciales |
-| **BR-002** | Ingreso de pronósticos con plazo 15:00 BOT | Módulo de Pronósticos | FSD §Pronósticos: UI de ingreso, validación de plazo, zona horaria |
+| **BR-002** | Ingreso de pronósticos con plazo 00:00 BOT (medianoche) | Módulo de Pronósticos | FSD §Pronósticos: UI de ingreso, validación de plazo, zona horaria |
 | **BR-003** | Motor de puntos (+1/+2/max 3) | Motor de Puntos | FSD §Motor de Puntos: algoritmo de cálculo, casos de prueba |
 | **BR-004** | Caso especial: pronóstico no ingresado = 0-0 | Motor de Puntos | FSD §Motor de Puntos: caso especial 0-0 por defecto |
-| **BR-005** | Bloqueo y publicación automática a las 15:00 | Módulo de Pronósticos | FSD §Pronósticos: lógica de cierre, visibilidad post-plazo |
+| **BR-005** | Bloqueo y publicación automática a medianoche | Módulo de Pronósticos | FSD §Pronósticos: lógica de cierre, visibilidad post-plazo |
 | **BR-006** | Tabla de posiciones en tiempo real | Tabla de Posiciones | FSD §Tabla de Posiciones: Supabase Realtime, ranking, puntaje acumulado |
 | **BR-007** | Pronóstico del Campeón Mundial (+5 pts) | Módulo de Pronósticos | FSD §Campeón Mundial: selector, visibilidad pública, cálculo al final |
 | **BR-008** | Distribución del pozo y reglas de empate | Módulo de Premiación | FSD §Distribución del Pozo: algoritmo, umbrales, casos de empate |
@@ -321,7 +321,7 @@ La siguiente tabla mapea los requerimientos de negocio de este BRD a las seccion
 | **RB-01** | Cuota fija Bs. 500 — cálculo del pozo | Gestión de Inscripciones | FSD §Inscripción: registro de pago, cálculo automático del pozo total |
 | **RB-02** | No retiro una vez inscrito | Gestión de Inscripciones | FSD §Inscripción: estado de cuenta, política de no devolución |
 | **RB-03** | Solo 90 minutos reglamentarios | Motor de Puntos | FSD §Motor de Puntos: definición del resultado oficial |
-| **RB-04** | Plazo 15:00 BOT día anterior | Módulo de Pronósticos | FSD §Pronósticos: cálculo de deadline, zona horaria BOT (UTC-4) |
+| **RB-04** | Plazo 00:00 BOT día del partido | Módulo de Pronósticos | FSD §Pronósticos: cálculo de deadline, zona horaria BOT (UTC-4) |
 | **RB-05** | Penalización pronóstico no ingresado (0-0 default) | Motor de Puntos | FSD §Motor de Puntos: flag `ingresado_manualmente`, caso 0-0 |
 | **RB-06** | Campeón Mundial: irrevocable, público, +5 pts | Módulo de Pronósticos | FSD §Campeón Mundial: visibilidad, bloqueo post-selección |
 | **RB-07** | Distribución 100 % / 75-25 % según inscritos | Módulo de Premiación | FSD §Distribución del Pozo: umbral 8 participantes |
@@ -383,7 +383,7 @@ La siguiente tabla mapea los requerimientos de negocio de este BRD a las seccion
 | **Score exacto** | Coincidencia exacta entre el pronóstico de un participante y el resultado oficial del partido a 90 minutos. |
 | **Resultado** | Desenlace del partido en términos de victoria local (V), empate (E) o victoria visitante (D), independientemente del marcador. |
 | **BOT** | Bolivia Time, UTC-4. Zona horaria oficial para todos los plazos del torneo. |
-| **Deadline** | 15:00 hora boliviana (BOT) del día calendario anterior a la fecha del partido. |
+| **Deadline** | medianoche (00:00 BOT) del día del partido. |
 | **Fallback** | Mecanismo alternativo (WhatsApp + carga manual por el admin) para registrar pronósticos en caso de fallo de la plataforma. |
 | **Campeón Mundial** | Equipo elegido por el participante como ganador del Mundial 2026. Se elige antes del partido inaugural y vale +5 puntos si acierta. |
 | **Admin** | El organizador (Vladimir Mariaca Vargas) en su rol de administrador del sistema. |

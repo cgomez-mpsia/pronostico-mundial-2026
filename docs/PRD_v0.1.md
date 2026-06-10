@@ -55,7 +55,7 @@ Proveer al organizador y a los participantes una plataforma web confiable, trans
 | ID      | Objetivo                                                                                                        |
 |---------|-----------------------------------------------------------------------------------------------------------------|
 | OBJ-001 | Centralizar el ingreso y la gestión de pronósticos, eliminando la dependencia de WhatsApp o Excel.             |
-| OBJ-002 | Garantizar la transparencia del proceso: pronósticos publicados públicamente a las 15:00 del día anterior.     |
+| OBJ-002 | Garantizar la transparencia del proceso: pronósticos publicados públicamente a las medianoche del día del partido.     |
 | OBJ-003 | Automatizar el cálculo de puntos tras el ingreso de resultados oficiales.                                       |
 | OBJ-004 | Ofrecer una tabla de posiciones pública y en tiempo real durante todo el torneo.                                |
 | OBJ-005 | Proveer al admin herramientas de gestión del torneo: cuentas, pagos, resultados y fallback de pronósticos.     |
@@ -103,11 +103,11 @@ Una aplicación web privada que actúa como árbitro neutral del torneo: recibe 
 - Autenticación de usuarios (login con usuario y contraseña gestionado por Supabase Auth).
 - Gestión de cuentas por el admin: creación manual, activación, asignación de rol.
 - Registro de pago de cuota de inscripción por el admin.
-- Fixture del Mundial 2026 con cálculo automático del plazo de cierre (15:00 BOT del día anterior).
+- Fixture del Mundial 2026 con cálculo automático del plazo de cierre (00:00 BOT (medianoche) del día del partido).
 - Ingreso y modificación de pronósticos (score exacto) antes del plazo.
 - Selección del Campeón Mundial por parte de cada participante (antes del partido inaugural).
 - Visibilidad del Campeón: pública desde el inicio del torneo.
-- Publicación automática de pronósticos a las 15:00 del día anterior; bloqueo inmediato.
+- Publicación automática de pronósticos a las medianoche del día del partido; bloqueo inmediato.
 - Fallback: el admin puede cargar manualmente pronósticos recibidos por WhatsApp antes del plazo.
 - Motor de puntos: +1 resultado, +2 score exacto (solo si ingresado manualmente), +5 campeón. Máx. 3 por partido.
 - Caso especial "No pronosticó": evaluado como 0-0 pero sin derecho a los +2, máximo 1 punto si el partido termina 0-0.
@@ -141,7 +141,7 @@ Una aplicación web privada que actúa como árbitro neutral del torneo: recibe 
 
 | ID     | Restricción                                                                                           |
 |--------|-------------------------------------------------------------------------------------------------------|
-| RST-001 | El plazo de cierre de pronósticos es siempre las 15:00 hora Bolivia (BOT, UTC-4) del día anterior al partido. |
+| RST-001 | El plazo de cierre de pronósticos es siempre medianoche (00:00 BOT) del día del partido. |
 | RST-002 | Solo el administrador puede crear cuentas; no existe registro público.                                |
 | RST-003 | Una vez inscrito (cuota pagada y cuenta activada), el participante no puede retirarse.                |
 | RST-004 | El motor de puntos evalúa únicamente los 90 minutos reglamentarios.                                   |
@@ -178,7 +178,7 @@ flowchart TD
     I -->|No| K[Guarda nuevo pronóstico]
     J --> L[Pronóstico guardado y privado]
     K --> L
-    L --> M{¿Son las 15:00 del día anterior?}
+    L --> M{¿Son las medianoche del día del partido?}
     M -->|No| N[Pronóstico permanece privado y editable]
     M -->|Sí| O[Pronóstico se publica y bloquea]
     G -->|No, plazo vencido| O
@@ -196,7 +196,7 @@ flowchart TD
     C -->|Nuevo participante| D[Crea cuenta: nombre, usuario, contraseña]
     D --> E[Registra pago de Bs. 500]
     E --> F[Envía credenciales por WhatsApp]
-    C -->|Fallback pronóstico| G[Recibe pronóstico por WhatsApp antes de las 15:00]
+    C -->|Fallback pronóstico| G[Recibe pronóstico por WhatsApp antes de medianoche]
     G --> H[Carga manualmente el pronóstico en la plataforma]
     H --> I[Pronóstico queda registrado antes del cierre]
     C -->|Registrar resultado| J[Selecciona partido jugado]
@@ -318,11 +318,11 @@ Feature: Lista de partidos y plazos
   Scenario: Ver partidos próximos con plazo abierto
     Given que estoy en la sección de pronósticos
     When la lista de partidos carga
-    Then veo cada partido con: equipos, fecha y hora del partido, plazo límite (15:00 del día anterior)
+    Then veo cada partido con: equipos, fecha y hora del partido, plazo límite (medianoche del día del partido)
     And los partidos con plazo abierto muestran el estado "Abierto"
 
   Scenario: Ver partidos con plazo vencido
-    Given que ya pasaron las 15:00 del día anterior a un partido
+    Given que ya pasaron las medianoche del día del partido
     When veo la lista de partidos
     Then ese partido muestra el estado "Cerrado"
     And ya no puedo modificar mi pronóstico para ese partido
@@ -333,7 +333,7 @@ Feature: Lista de partidos y plazos
     Then los partidos están ordenados cronológicamente por fecha y hora
 ```
 
-**Reglas de negocio referenciadas:** BR-003 (plazo de cierre 15:00 BOT del día anterior)
+**Reglas de negocio referenciadas:** BR-003 (plazo de cierre 00:00 BOT (medianoche) del día del partido)
 **Prioridad:** Alta | **Story Points:** 2
 
 ---
@@ -356,10 +356,10 @@ Feature: Ingreso de pronóstico
     And presiono "Guardar pronóstico"
     Then mi pronóstico queda registrado como "2 - 1"
     And el sistema muestra confirmación "Pronóstico guardado"
-    And el pronóstico permanece privado hasta las 15:00 del día anterior
+    And el pronóstico permanece privado hasta las medianoche del día del partido
 
   Scenario: Intentar ingresar pronóstico con plazo vencido
-    Given que ya son las 15:00 del día anterior al partido
+    Given que ya son las medianoche del día del partido
     When intento acceder al formulario de pronóstico
     Then el formulario aparece bloqueado (solo lectura)
     And veo el mensaje "El plazo para pronosticar este partido ha vencido"
@@ -395,7 +395,7 @@ Feature: Modificación de pronóstico
     And veo la confirmación "Pronóstico actualizado"
 
   Scenario: Intentar modificar después del plazo
-    Given que ya son las 15:00 del día anterior al partido
+    Given que ya son las medianoche del día del partido
     And tengo un pronóstico guardado "1 - 0"
     When intento editar el formulario
     Then el campo está deshabilitado
@@ -429,7 +429,7 @@ Feature: Estado de pronósticos propios
     Then ese partido muestra "No pronosticó" (sin revelar el 0-0 interno)
 
   Scenario: Pronóstico bloqueado
-    Given que ya pasaron las 15:00 del día anterior
+    Given que ya pasaron las medianoche del día del partido
     When veo mi pronóstico guardado
     Then el estado muestra "Bloqueado" y el campo no es editable
 ```
@@ -451,7 +451,7 @@ Feature: Estado de pronósticos propios
 Feature: Visibilidad pública de pronósticos post-cierre
 
   Scenario: Ver pronósticos de todos después del plazo
-    Given que ya son las 15:00 del día anterior a un partido
+    Given que ya son las medianoche del día del partido
     When accedo a la vista de ese partido
     Then veo una tabla con todos los participantes, su pronóstico o "No pronosticó"
 
@@ -701,7 +701,7 @@ Feature: Carga manual de pronóstico por el admin (fallback)
     And se registra un log indicando "cargado manualmente por admin"
 
   Scenario: Intentar cargar pronóstico después del plazo
-    Given que ya son las 15:00 del día anterior al partido
+    Given que ya son las medianoche del día del partido
     When intento cargar un pronóstico manual para ese partido
     Then el sistema no lo permite
     And veo el mensaje "El plazo de cierre ya venció para este partido"
@@ -847,7 +847,7 @@ Feature: Gestión del fixture por el admin
     Given que existe el partido "Argentina vs México" con fecha errónea
     When edito la fecha y guardo
     Then el fixture muestra la fecha correcta
-    And los plazos de cierre se recalculan automáticamente (15:00 BOT del día anterior)
+    And los plazos de cierre se recalculan automáticamente (00:00 BOT (medianoche) del día del partido)
 
   Scenario: Admin intenta editar un partido ya finalizado
     Given que el partido "España vs Alemania" tiene status "finished"
@@ -1868,13 +1868,13 @@ Feature: Prediction card — pulido visual
     And ningún equipo "empuja" el score hacia un lado
 
   Scenario: Plazo en formato 24h
-    Given un partido con deadline a las 15:00 BOT
+    Given un partido con deadline a medianoche (00:00 BOT)
     When veo la tarjeta del partido
-    Then el plazo muestra "Cierra: mar, 10 jun, 15:00"
+    Then el plazo muestra "Cierra: mar, 10 jun, 00:00"
     And no aparece el formato "03:00 p. m." ni "a. m."
 
   Scenario: Meta-line sin redundancia
-    Given un partido con horario 15:00 y deadline mié 10 jun 15:00
+    Given un partido con horario 15:00 y deadline mié 10 jun 00:00
     When el card está en estado abierto (con inputs)
     Then la meta-line muestra solo "Cierra: mié, 10 jun, 15:00"
     And no repite el horario "15:00" como dato separado en la meta-line
@@ -2239,7 +2239,7 @@ Feature: Champion flag badge en avatar
 | PRD-REQ-003 | El admin debe poder registrar el pago de la cuota (Bs. 500) para activar cada cuenta.                       | PRD-US-012                   | Alta      |
 | PRD-REQ-004 | El fixture del torneo debe mostrar partidos con fecha, hora y plazo de cierre calculado automáticamente.     | PRD-US-003                   | Alta      |
 | PRD-REQ-005 | Los participantes deben poder ingresar y modificar pronósticos de score exacto mientras el plazo esté abierto. | PRD-US-004, PRD-US-005      | Alta      |
-| PRD-REQ-006 | A las 15:00 BOT del día anterior, los pronósticos deben bloquearse y publicarse automáticamente.             | PRD-US-006, PRD-US-007       | Alta      |
+| PRD-REQ-006 | A las 00:00 BOT (medianoche) del día del partido, los pronósticos deben bloquearse y publicarse automáticamente.             | PRD-US-006, PRD-US-007       | Alta      |
 | PRD-REQ-007 | Un pronóstico no ingresado debe registrarse internamente como 0-0 y mostrarse como "No pronosticó" en la UI. | PRD-US-006, PRD-US-016       | Alta      |
 | PRD-REQ-008 | Los participantes deben poder elegir su Campeón Mundial antes del partido inaugural; la elección es pública. | PRD-US-008, PRD-US-009       | Alta      |
 | PRD-REQ-009 | El admin debe poder registrar el resultado oficial (marcador 90 min) de cada partido.                        | PRD-US-015                   | Alta      |
@@ -2250,7 +2250,7 @@ Feature: Champion flag badge en avatar
 | PRD-REQ-014 | El sistema debe calcular y mostrar el pozo total y la distribución estimada/final de premios.                | PRD-US-013, PRD-US-017       | Alta      |
 | PRD-REQ-015 | La distribución del pozo debe aplicar las reglas de empate: fusionar premios en 1ro, dividir en 2do.        | PRD-US-017                   | Alta      |
 | PRD-REQ-016 | El admin debe poder crear, editar y eliminar partidos del fixture desde el panel de administración.          | PRD-US-018                   | Alta      |
-| PRD-REQ-017 | Al editar un partido, el plazo de cierre debe recalcularse automáticamente (15:00 BOT del día anterior).    | PRD-US-018                   | Alta      |
+| PRD-REQ-017 | Al editar un partido, el plazo de cierre debe recalcularse automáticamente (00:00 BOT (medianoche) del día del partido).    | PRD-US-018                   | Alta      |
 | PRD-REQ-018 | El admin debe poder ejecutar la acción "Aplicar puntos de Campeón" una sola vez al finalizar el torneo.     | PRD-US-019                   | Alta      |
 | PRD-REQ-019 | La acción de puntos de campeón debe ser idempotente — ejecutarla dos veces no duplica puntos.               | PRD-US-019                   | Alta      |
 | PRD-REQ-020 | Los participantes deben poder ver un desglose de sus puntos partido por partido (solo partidos finalizados). | PRD-US-020                   | Media     |
@@ -2329,10 +2329,10 @@ Feature: Champion flag badge en avatar
 |--------|---------------------------------------------------------------------------------------------------------------------|
 | BR-001 | La cuota de inscripción es de Bs. 500 por participante. No hay límite de participantes.                            |
 | BR-002 | El registro es manual: el admin crea todas las cuentas y entrega credenciales. No existe autoregistro.             |
-| BR-003 | El plazo de cierre de pronósticos es las 15:00 hora Bolivia (BOT, UTC-4) del día anterior al partido. Pasado ese plazo, los pronósticos se publican y se bloquean. |
+| BR-003 | El plazo de cierre de pronósticos es medianoche (00:00 BOT) del día del partido. Pasado ese plazo, los pronósticos se publican y se bloquean. |
 | BR-004 | Sistema de puntos por partido: +1 por acertar resultado (V/E/D), +2 adicionales por score exacto (solo si ingresado manualmente). Máximo 3 por partido. Solo cuentan los 90 minutos reglamentarios. |
 | BR-005 | Un pronóstico no ingresado se muestra como "No pronosticó" en la UI y se evalúa internamente como 0-0. Si el partido termina 0-0, el jugador gana 1 punto pero no los +2 adicionales. |
-| BR-006 | Los pronósticos son privados hasta las 15:00 del día anterior. Después, todos los pronósticos (incluyendo "No pronosticó") son visibles públicamente. |
+| BR-006 | Los pronósticos son privados hasta las medianoche del día del partido. Después, todos los pronósticos (incluyendo "No pronosticó") son visibles públicamente. |
 | BR-007 | El Campeón Mundial se elige antes del partido inaugural. Si se acierta, se suman +5 puntos al final del torneo. La elección es pública desde el inicio. |
 | BR-008 | La tabla de posiciones es pública, permanente y se actualiza en tiempo real tras el registro de cada resultado. |
 | BR-009 | Distribución del pozo: ≤8 participantes → 100% al 1er lugar. >8 participantes → 75% al 1er lugar y 25% al 2do lugar. |
@@ -2348,7 +2348,7 @@ Feature: Champion flag badge en avatar
 |--------|-----------------------------------------------|--------------------------------------|----------------------------------|
 | BR-001 | Cuota Bs. 500, sin límite de participantes    | PRD-REQ-003, PRD-REQ-014            | PRD-US-012, PRD-US-013           |
 | BR-002 | Registro manual por admin                     | PRD-REQ-001, PRD-REQ-002            | PRD-US-001, PRD-US-002           |
-| BR-003 | Plazo 15:00 BOT día anterior, bloqueo         | PRD-REQ-004, PRD-REQ-005, PRD-REQ-006 | PRD-US-003, PRD-US-004, PRD-US-005, PRD-US-006 |
+| BR-003 | Plazo 00:00 BOT día del partido, bloqueo         | PRD-REQ-004, PRD-REQ-005, PRD-REQ-006 | PRD-US-003, PRD-US-004, PRD-US-005, PRD-US-006 |
 | BR-004 | Sistema de puntos (+1/+2/max 3, solo 90 min)  | PRD-REQ-010, PRD-REQ-011            | PRD-US-015, PRD-US-016           |
 | BR-005 | "No pronosticó": 0-0 interno, max 1 pt        | PRD-REQ-007, PRD-REQ-011            | PRD-US-006, PRD-US-016           |
 | BR-006 | Privacidad pronósticos hasta el plazo         | PRD-REQ-006                         | PRD-US-007                       |
@@ -2379,7 +2379,7 @@ Feature: Champion flag badge en avatar
 | PRD-REQ-003 | `app/admin/users` · Route Handler `PATCH /api/admin/users/[id]/pago` |
 | PRD-REQ-004 | `app/(auth)/fixture` · Server Component · Tabla de partidos         |
 | PRD-REQ-005 | `app/(auth)/fixture/[partidoId]` · Route Handler `POST /api/pronosticos` |
-| PRD-REQ-006 | Cron job o Supabase Edge Function · Bloqueo automático 15:00 BOT    |
+| PRD-REQ-006 | Cron job o Supabase Edge Function · Bloqueo automático medianoche BOT (00:00)    |
 | PRD-REQ-007 | `lib/points.ts` · Lógica de evaluación pronóstico vacío             |
 | PRD-REQ-008 | `app/(auth)/campeon` · Route Handler `POST /api/campeon`            |
 | PRD-REQ-009 | `app/admin/resultados` · Route Handler `POST /api/admin/resultados` |
@@ -2461,7 +2461,7 @@ Feature: Champion flag badge en avatar
 | PRD-REQ-085 | La página `/settings` debe organizar sus secciones en cards independientes: (1) Foto de perfil, (2) Contraseña, (3) Estado de inscripción (read-only). Cada card tiene su propio estado de loading y error. | PRD-US-044 | Baja |
 | PRD-REQ-086 | Los nuevos componentes shadcn necesarios para estos cambios deben instalarse vía CLI: `npx shadcn@latest add breadcrumb collapsible table`. | PRD-US-039..044 | Media |
 | PRD-REQ-087 | La zona del score/inputs de la prediction card debe implementarse con CSS Grid de 3 columnas (`grid-cols-[1fr_auto_1fr]`): columnas laterales (`1fr`) para código+bandera de cada equipo, columna central (`auto`) para la hora, score o inputs. El centrado del elemento central no debe depender de la longitud de los nombres de equipo. | PRD-US-045, BR-037 | Media |
-| PRD-REQ-088 | La función de formateo de `deadlineAtLabel` en `dashboard/page.tsx` debe incluir `hour12: false` en las opciones de `Intl.DateTimeFormat`, igual que `formatBOTTime`. El resultado debe ser "mié, 10 jun, 15:00" en lugar de "mié, 10 jun, 03:00 p. m.". | PRD-US-045, BR-038 | Media |
+| PRD-REQ-088 | La función de formateo de `deadlineAtLabel` en `dashboard/page.tsx` debe incluir `hour12: false` en las opciones de `Intl.DateTimeFormat`, igual que `formatBOTTime`. El resultado debe ser "mié, 10 jun, 00:00" en lugar de "mié, 10 jun, 12:00 a. m.". | PRD-US-045, BR-038 | Media |
 | PRD-REQ-089 | La línea de metadatos de la prediction card para partidos en estado `scheduled` debe mostrar únicamente "Cierra: [fecha y hora BOT]". El horario del partido no debe repetirse en esta línea. | PRD-US-045, BR-039 | Media |
 | PRD-REQ-090 | La etiqueta de etapa del partido no debe renderizarse dentro del cuerpo de la prediction card para partidos de fase de grupos (el fixture agrupa estos partidos bajo un encabezado de sección con esa misma etiqueta). | PRD-US-045, BR-040 | Baja |
 | PRD-REQ-091 | El botón "Guardar pronóstico" de la prediction card debe renderizarse con `size="sm"`, alineado a la derecha del card, sin ocupar el ancho completo. | PRD-US-045, BR-041 | Media |
