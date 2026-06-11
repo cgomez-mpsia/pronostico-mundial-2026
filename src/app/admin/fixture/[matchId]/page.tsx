@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
-import { matches, teams, participants, users, predictions, tournaments } from "@/db/schema";
+import { matches, teams, participants, users, predictions, matchPoints } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { PredictionRow } from "./prediction-row";
+import { CopyButton } from "@/components/copy-button";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -87,6 +88,7 @@ export default async function AdminMatchDetailPage({
       predHome: predictions.homeScore,
       predAway: predictions.awayScore,
       isManuallyEntered: predictions.isManuallyEntered,
+      totalPoints: matchPoints.totalPoints,
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
@@ -94,10 +96,47 @@ export default async function AdminMatchDetailPage({
       predictions,
       and(eq(predictions.participantId, participants.id), eq(predictions.matchId, matchId))
     )
+    .leftJoin(
+      matchPoints,
+      and(eq(matchPoints.participantId, participants.id), eq(matchPoints.matchId, matchId))
+    )
     .where(eq(participants.tournamentId, matchRows.tournamentId))
     .orderBy(users.fullName);
 
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
+  const isFinished = matchRows.status === "finished";
+
+  // Texto para compartir por chat
+  const home = matchRows.homeTeamName ?? "Local";
+  const away = matchRows.awayTeamName ?? "Visitante";
+  const stageLine = STAGE_LABELS[matchRows.stage] ?? matchRows.stage;
+  const dateLine = formatBOT(matchRows.scheduledAt);
+  const summaryLines: string[] = [];
+  if (isFinished) {
+    summaryLines.push(`⚽ ${home} vs ${away} | ${displayHomeScore}-${displayAwayScore}`);
+  } else {
+    summaryLines.push(`⚽ ${home} vs ${away}`);
+  }
+  summaryLines.push(`${stageLine} · ${dateLine}`);
+  summaryLines.push("");
+  if (!deadlinePassed) {
+    summaryLines.push(`${submittedCount}/${rows.length} participantes enviaron su pronóstico`);
+  } else {
+    summaryLines.push("Pronósticos:");
+    const sorted = isFinished
+      ? [...rows].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
+      : rows;
+    for (const r of sorted) {
+      const pred = r.isManuallyEntered ? `${r.predHome}-${r.predAway}` : "sin pronóstico";
+      if (isFinished && r.totalPoints !== null) {
+        const pts = r.totalPoints === 1 ? "1 pt" : `${r.totalPoints} pts`;
+        summaryLines.push(`${r.fullName} → ${pred} (${pts})`);
+      } else {
+        summaryLines.push(`${r.fullName} → ${pred}`);
+      }
+    }
+  }
+  const summaryText = summaryLines.join("\n");
 
   return (
     <div className="space-y-6 p-6 lg:p-8 max-w-2xl">
@@ -135,9 +174,10 @@ export default async function AdminMatchDetailPage({
             Avanza: <span className="font-medium">{winnerName}</span>
           </p>
         )}
-        <div className="flex flex-wrap gap-4 text-xs text-zinc-500">
+        <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-500">
           <span>Partido: {formatBOT(matchRows.scheduledAt)}</span>
           <span>Deadline: {formatBOT(matchRows.deadlineAt)}</span>
+          <CopyButton text={summaryText} />
         </div>
       </div>
 

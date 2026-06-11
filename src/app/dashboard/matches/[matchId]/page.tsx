@@ -5,6 +5,7 @@ import { participants, users, matches, predictions, matchPoints, teams, tourname
 import { eq, and } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import Link from "next/link";
+import { CopyButton } from "@/components/copy-button";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -113,6 +114,34 @@ export default async function MatchDetailPage({
 
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
 
+  // Texto para compartir por chat (disponible solo tras el deadline)
+  const homeTeamLabel = matchRows.homeTeamName ?? "Local";
+  const awayTeamLabel = matchRows.awayTeamName ?? "Visitante";
+  const stageLabelText = STAGE_LABELS[matchRows.stage] ?? matchRows.stage;
+  const matchDateText = formatBOT(matchRows.scheduledAt);
+  const chatLines: string[] = [];
+  if (isFinished) {
+    chatLines.push(`⚽ ${homeTeamLabel} vs ${awayTeamLabel} | ${displayHomeScore}-${displayAwayScore}`);
+  } else {
+    chatLines.push(`⚽ ${homeTeamLabel} vs ${awayTeamLabel}`);
+  }
+  chatLines.push(`${stageLabelText} · ${matchDateText}`);
+  chatLines.push("");
+  chatLines.push("Pronósticos:");
+  const sortedRows = isFinished
+    ? [...rows].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
+    : rows;
+  for (const r of sortedRows) {
+    const pred = r.isManuallyEntered ? `${r.predHomeScore}-${r.predAwayScore}` : "sin pronóstico";
+    if (isFinished && r.totalPoints !== null) {
+      const pts = r.totalPoints === 1 ? "1 pt" : `${r.totalPoints} pts`;
+      chatLines.push(`${r.fullName} → ${pred} (${pts})`);
+    } else {
+      chatLines.push(`${r.fullName} → ${pred}`);
+    }
+  }
+  const chatSummary = chatLines.join("\n");
+
   return (
     <div className="space-y-6 p-6 lg:p-8 max-w-2xl">
       {/* Back */}
@@ -153,6 +182,11 @@ export default async function MatchDetailPage({
         <p className="text-sm text-zinc-500 text-center">{formatBOT(matchRows.scheduledAt)}</p>
         {isFinished && (
           <p className="text-center text-xs text-zinc-400">Partido finalizado</p>
+        )}
+        {deadlinePassed && (
+          <div className="flex justify-center pt-1">
+            <CopyButton text={chatSummary} />
+          </div>
         )}
       </div>
 
