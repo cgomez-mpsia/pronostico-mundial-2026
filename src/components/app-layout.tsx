@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { LiveNotifications } from "@/components/live-notifications";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface AppLayoutProps {
@@ -32,6 +33,7 @@ export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUr
         </header>
         <main className="flex-1">{children}</main>
       </SidebarInset>
+      <LiveNotifications />
     </SidebarProvider>
   );
 }

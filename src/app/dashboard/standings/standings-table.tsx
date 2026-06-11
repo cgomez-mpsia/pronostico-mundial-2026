@@ -13,6 +13,7 @@ interface Standing {
   championTeamName: string | null;
   hasPaid: boolean;
   totalPoints: number;
+  livePoints: number;
 }
 
 function initials(name: string) {
@@ -68,29 +69,38 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
     refetchInterval: 10_000, // fallback: refresca cada 10s si Realtime no dispara
   });
 
-  // Supabase Realtime: refetch cuando cambia match_points
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
+
+    const mpChannel = supabase
       .channel("match_points_changes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "match_points" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["standings"] });
-        }
+        () => queryClient.invalidateQueries({ queryKey: ["standings"] })
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("[Realtime] match_points suscrito ✓");
-        }
-        if (status === "CHANNEL_ERROR") {
-          console.warn("[Realtime] Error al suscribirse a match_points");
-        }
+        if (status === "SUBSCRIBED") console.log("[Realtime] match_points suscrito ✓");
+        if (status === "CHANNEL_ERROR") console.warn("[Realtime] Error al suscribirse a match_points");
       });
 
+    const matchChannel = supabase
+      .channel("live_match_score_standings")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "matches" },
+        (payload) => {
+          const updated = payload.new as { status: string };
+          if (updated.status === "live" || updated.status === "finished") {
+            queryClient.invalidateQueries({ queryKey: ["standings"] });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(mpChannel);
+      supabase.removeChannel(matchChannel);
     };
   }, [queryClient]);
 
@@ -106,8 +116,16 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
     );
   }
 
+  const hasLive = standings.some((s) => s.livePoints > 0);
+
   return (
     <div className="overflow-x-auto">
+      {hasLive && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-red-500">
+          <span className="animate-pulse">●</span>
+          Partido en vivo — puntos provisionales incluidos
+        </p>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs text-zinc-500">
@@ -117,42 +135,50 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
           </tr>
         </thead>
         <tbody className="divide-y">
-          {standings.map((s) => (
-            <tr
-              key={s.participantId}
-              className={
-                s.participantId === currentUserId
-                  ? "bg-zinc-50 dark:bg-zinc-800/50"
-                  : ""
-              }
-            >
-              <td className="py-2.5 pr-4 tabular-nums text-zinc-400">
-                {s.rank}
-              </td>
-              <td className="py-2.5 pr-4">
-                <div className="flex items-center gap-2.5">
-                  <Avatar
-                    name={s.fullName}
-                    url={s.avatarUrl}
-                    championFlagUrl={s.championFlagUrl}
-                    championTeamName={s.championTeamName}
-                  />
-                  <span className="font-medium">
-                    {s.fullName}
-                    {s.participantId === currentUserId && (
-                      <span className="ml-2 text-xs text-zinc-400">(tú)</span>
-                    )}
-                    {isAdmin && !s.hasPaid && (
-                      <span className="ml-2 text-xs text-amber-500">Pendiente</span>
-                    )}
+          {standings.map((s) => {
+            const displayTotal = s.totalPoints + s.livePoints;
+            return (
+              <tr
+                key={s.participantId}
+                className={
+                  s.participantId === currentUserId
+                    ? "bg-zinc-50 dark:bg-zinc-800/50"
+                    : ""
+                }
+              >
+                <td className="py-2.5 pr-4 tabular-nums text-zinc-400">
+                  {s.rank}
+                </td>
+                <td className="py-2.5 pr-4">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar
+                      name={s.fullName}
+                      url={s.avatarUrl}
+                      championFlagUrl={s.championFlagUrl}
+                      championTeamName={s.championTeamName}
+                    />
+                    <span className="font-medium">
+                      {s.fullName}
+                      {s.participantId === currentUserId && (
+                        <span className="ml-2 text-xs text-zinc-400">(tú)</span>
+                      )}
+                      {isAdmin && !s.hasPaid && (
+                        <span className="ml-2 text-xs text-amber-500">Pendiente</span>
+                      )}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-2.5 text-right tabular-nums">
+                  <span className={s.livePoints > 0 ? "font-semibold text-red-500" : "font-semibold"}>
+                    {displayTotal}
                   </span>
-                </div>
-              </td>
-              <td className="py-2.5 text-right tabular-nums font-semibold">
-                {s.totalPoints}
-              </td>
-            </tr>
-          ))}
+                  {s.livePoints > 0 && (
+                    <span className="ml-1 text-[10px] text-red-400">(+{s.livePoints}●)</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

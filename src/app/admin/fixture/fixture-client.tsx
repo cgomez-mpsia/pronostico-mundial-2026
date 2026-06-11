@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ResultForm } from "./result-form";
+import { LiveControls } from "./live-controls";
 import { MatchForm, type Team } from "./match-form";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -244,6 +245,14 @@ export function FixtureClient({ tournamentName, matches, teams }: Props) {
                             <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
                           )}
                         </div>
+                      ) : m.status === "live" ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-2xl font-bold tabular-nums text-red-500">
+                            {m.homeScore ?? 0}
+                            {" — "}
+                            {m.awayScore ?? 0}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-2xl font-bold tabular-nums text-zinc-400">
                           {formatBOTTime(m.scheduledAt)}
@@ -269,6 +278,11 @@ export function FixtureClient({ tournamentName, matches, teams }: Props) {
                             Finalizado
                           </span>
                         )}
+                        {m.status === "live" && (
+                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400">
+                            🔴 En vivo
+                          </span>
+                        )}
                         {(!m.homeTeamName || !m.awayTeamName) && (
                           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
                             Por definir
@@ -280,23 +294,66 @@ export function FixtureClient({ tournamentName, matches, teams }: Props) {
                     {/* Separador */}
                     <div className="my-3 border-t border-zinc-100 dark:border-zinc-800" />
 
-                    {/* Formulario de resultado */}
-                    <ResultForm
-                      matchId={m.matchId}
-                      stage={m.stage}
-                      homeTeamId={m.homeTeamId}
-                      awayTeamId={m.awayTeamId}
-                      homeTeamName={homeName}
-                      awayTeamName={awayName}
-                      currentHomeScore={m.homeScore}
-                      currentAwayScore={m.awayScore}
-                      currentHomeScoreFull={m.homeScoreFull}
-                      currentAwayScoreFull={m.awayScoreFull}
-                      currentExtraTime={m.extraTime}
-                      currentMatchWinnerId={m.matchWinnerId}
-                      isFinished={m.status === "finished"}
-                      onSuccess={() => router.refresh()}
-                    />
+                    {/* Controles de resultado */}
+                    {m.status === "live" ? (
+                      <LiveControls
+                        matchId={m.matchId}
+                        status={m.status}
+                        homeScore={m.homeScore}
+                        awayScore={m.awayScore}
+                        homeTeamName={homeName}
+                        awayTeamName={awayName}
+                        onUpdate={() => router.refresh()}
+                      />
+                    ) : m.status === "finished" ? (
+                      <ResultForm
+                        matchId={m.matchId}
+                        stage={m.stage}
+                        homeTeamId={m.homeTeamId}
+                        awayTeamId={m.awayTeamId}
+                        homeTeamName={homeName}
+                        awayTeamName={awayName}
+                        currentHomeScore={m.homeScore}
+                        currentAwayScore={m.awayScore}
+                        currentHomeScoreFull={m.homeScoreFull}
+                        currentAwayScoreFull={m.awayScoreFull}
+                        currentExtraTime={m.extraTime}
+                        currentMatchWinnerId={m.matchWinnerId}
+                        isFinished={true}
+                        onSuccess={() => router.refresh()}
+                      />
+                    ) : (
+                      /* scheduled: live button + direct result entry */
+                      <div className="space-y-3">
+                        <LiveControls
+                          matchId={m.matchId}
+                          status={m.status}
+                          homeScore={m.homeScore}
+                          awayScore={m.awayScore}
+                          homeTeamName={homeName}
+                          awayTeamName={awayName}
+                          onUpdate={() => router.refresh()}
+                        />
+                        <div className="border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                          <ResultForm
+                            matchId={m.matchId}
+                            stage={m.stage}
+                            homeTeamId={m.homeTeamId}
+                            awayTeamId={m.awayTeamId}
+                            homeTeamName={homeName}
+                            awayTeamName={awayName}
+                            currentHomeScore={m.homeScore}
+                            currentAwayScore={m.awayScore}
+                            currentHomeScoreFull={m.homeScoreFull}
+                            currentAwayScoreFull={m.awayScoreFull}
+                            currentExtraTime={m.extraTime}
+                            currentMatchWinnerId={m.matchWinnerId}
+                            isFinished={false}
+                            onSuccess={() => router.refresh()}
+                          />
+                        </div>
+                      </div>
+                    )}
 
                   </div>
                 );
