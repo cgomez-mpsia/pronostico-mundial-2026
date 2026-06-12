@@ -86,14 +86,14 @@ export function PushNotifications() {
       const key = sub.getKey("p256dh");
       const auth = sub.getKey("auth");
 
+      // Usar Array.from para evitar stack overflow con arrays grandes
+      const p256dh = btoa(Array.from(new Uint8Array(key!)).map((b) => String.fromCharCode(b)).join(""));
+      const authKey = btoa(Array.from(new Uint8Array(auth!)).map((b) => String.fromCharCode(b)).join(""));
+
       await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: sub.endpoint,
-          p256dh: btoa(String.fromCharCode(...new Uint8Array(key!))),
-          auth: btoa(String.fromCharCode(...new Uint8Array(auth!))),
-        }),
+        body: JSON.stringify({ endpoint: sub.endpoint, p256dh, auth: authKey }),
       });
 
       setSubscribed(true);
@@ -104,8 +104,14 @@ export function PushNotifications() {
 
   async function handleTest() {
     setLoading(true);
-    await fetch("/api/admin/push-test", { method: "POST" });
+    const res = await fetch("/api/admin/push-test", { method: "POST" });
+    const data = await res.json();
     setLoading(false);
+    if (!res.ok) {
+      alert(`Error: ${data.error ?? "desconocido"}`);
+    } else {
+      alert(`Enviado a ${data.sent} dispositivo(s). Revisa las notificaciones.`);
+    }
   }
 
   async function handleDisable() {
