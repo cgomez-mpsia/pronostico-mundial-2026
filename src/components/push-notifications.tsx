@@ -102,6 +102,12 @@ export function PushNotifications() {
     }
   }
 
+  async function handleTest() {
+    setLoading(true);
+    await fetch("/api/admin/push-test", { method: "POST" });
+    setLoading(false);
+  }
+
   async function handleDisable() {
     setLoading(true);
     try {
@@ -152,17 +158,29 @@ export function PushNotifications() {
 
   if (subscribed) {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 gap-1.5 px-2 text-xs text-zinc-500"
-        onClick={handleDisable}
-        disabled={loading}
-        title="Desactivar recordatorios de partidos"
-      >
-        <Bell className="h-3.5 w-3.5 text-green-500" />
-        <span className="hidden sm:inline">Notificaciones activas</span>
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-xs text-zinc-500"
+          onClick={handleDisable}
+          disabled={loading}
+          title="Desactivar recordatorios de partidos"
+        >
+          <Bell className="h-3.5 w-3.5 text-green-500" />
+          <span className="hidden sm:inline">Notificaciones activas</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs text-zinc-400 hover:text-zinc-600"
+          onClick={handleTest}
+          disabled={loading}
+          title="Enviar notificación de prueba"
+        >
+          Probar
+        </Button>
+      </div>
     );
   }
 
