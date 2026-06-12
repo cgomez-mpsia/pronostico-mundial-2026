@@ -31,7 +31,7 @@ export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUr
           <div className="ml-1 flex-1">
             <AppBreadcrumb />
           </div>
-          <PushNotifications />
+          <PushNotifications isAdmin={isAdmin} />
         </header>
         <main className="flex-1">{children}</main>
       </SidebarInset>
