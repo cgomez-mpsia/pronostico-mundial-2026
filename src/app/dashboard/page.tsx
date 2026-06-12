@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { participants, tournaments, teams, matches, predictions } from "@/db/schema";
-import { eq, or, asc } from "drizzle-orm";
+import { eq, or, asc, and } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { PredictionCard } from "./prediction-card";
 import { FixtureRealtime } from "./fixture-realtime";
@@ -78,10 +78,12 @@ export default async function DashboardPage() {
     );
   }
 
-  const participant = await db.query.participants.findFirst({
-    where: eq(participants.userId, user.id),
-    columns: { id: true, hasPaid: true, championTeamId: true },
-  });
+  const participant = tournament
+    ? await db.query.participants.findFirst({
+        where: and(eq(participants.userId, user.id), eq(participants.tournamentId, tournament.id)),
+        columns: { id: true, hasPaid: true, championTeamId: true },
+      })
+    : undefined;
 
   const homeTeam = alias(teams, "home_team");
   const awayTeam = alias(teams, "away_team");

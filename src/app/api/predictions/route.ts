@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Upsert de la predicción
-  await db
+  // Upsert de la predicción — .returning() para detectar fallos silenciosos del driver
+  const result = await db
     .insert(predictions)
     .values({
       participantId: participant.id,
@@ -112,7 +112,15 @@ export async function POST(request: NextRequest) {
         isManuallyEntered: true,
         submittedAt: new Date(),
       },
-    });
+    })
+    .returning({ id: predictions.id });
+
+  if (result.length === 0) {
+    return NextResponse.json(
+      { error: "No se pudo guardar el pronóstico. Intenta de nuevo." },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({ success: true });
 }

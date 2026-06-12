@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,14 @@ export function PredictionCard({
     prediction ? { home: prediction.homeScore, away: prediction.awayScore } : null
   );
   const [error, setError] = useState<string | null>(null);
+  const justSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sincronizar inputs y pronóstico guardado cuando el prop cambia (re-render del servidor)
+  useEffect(() => {
+    setHome(prediction?.homeScore ?? 0);
+    setAway(prediction?.awayScore ?? 0);
+    setSavedPrediction(prediction ? { home: prediction.homeScore, away: prediction.awayScore } : null);
+  }, [prediction?.homeScore, prediction?.awayScore]);
 
   async function handleSave() {
     setSaving(true);
@@ -85,8 +93,9 @@ export function PredictionCard({
       }
 
       setSavedPrediction({ home, away });
+      if (justSavedTimerRef.current) clearTimeout(justSavedTimerRef.current);
       setJustSaved(true);
-      setTimeout(() => setJustSaved(false), 3000);
+      justSavedTimerRef.current = setTimeout(() => setJustSaved(false), 3000);
     } catch {
       setError("Sin conexión. Verifica tu red e intenta de nuevo.");
     } finally {
