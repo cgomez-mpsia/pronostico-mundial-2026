@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users, participants, tournaments } from "@/db/schema";
 import { eq, and, or } from "drizzle-orm";
 import { AvatarForm } from "./avatar-form";
+import { NameForm } from "./name-form";
 import { PasswordForm } from "./password-form";
 
 export default async function SettingsPage() {
@@ -42,7 +43,17 @@ export default async function SettingsPage() {
         <p className="text-sm text-zinc-500">Gestiona tu cuenta y preferencias.</p>
       </div>
 
-      {/* Sección 1 — Foto de perfil */}
+      {/* Sección 1 — Nombre */}
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+          Nombre
+        </h2>
+        <NameForm currentName={row?.fullName ?? ""} />
+      </section>
+
+      <hr className="border-zinc-200 dark:border-zinc-800" />
+
+      {/* Sección 2 — Foto de perfil */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
           Foto de perfil
