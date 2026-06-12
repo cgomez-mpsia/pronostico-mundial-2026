@@ -99,12 +99,12 @@ export default async function HoyPage() {
     )
     .orderBy(matches.scheduledAt);
 
-  // Puntos de todos los partidos de hoy por participante
+  // Pronósticos y puntos de los partidos de hoy: una fila por (participante × partido)
   const matchIds = todayMatches.map((m) => m.matchId);
   const allRows = matchIds.length > 0
     ? await db
         .select({
-          matchId: matchPoints.matchId,
+          matchId: matches.id,
           participantId: participants.id,
           fullName: users.fullName,
           avatarUrl: users.avatarUrl,
@@ -118,18 +118,22 @@ export default async function HoyPage() {
         })
         .from(participants)
         .innerJoin(users, eq(participants.userId, users.id))
+        // Cross-join con los partidos de hoy: genera una fila por (participante, partido)
+        .innerJoin(matches, inArray(matches.id, matchIds))
+        // Predicción del participante para ESE partido específico
         .leftJoin(
           predictions,
           and(
             eq(predictions.participantId, participants.id),
-            inArray(predictions.matchId, matchIds)
+            eq(predictions.matchId, matches.id)
           )
         )
+        // Puntos del participante en ESE partido específico
         .leftJoin(
           matchPoints,
           and(
             eq(matchPoints.participantId, participants.id),
-            inArray(matchPoints.matchId, matchIds)
+            eq(matchPoints.matchId, matches.id)
           )
         )
         .where(eq(participants.tournamentId, tournament.id))
