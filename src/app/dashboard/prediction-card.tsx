@@ -71,23 +71,27 @@ export function PredictionCard({
     setJustSaved(false);
     setError(null);
 
-    const res = await fetch("/api/predictions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId, homeScore: home, awayScore: away }),
-    });
+    try {
+      const res = await fetch("/api/predictions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId, homeScore: home, awayScore: away }),
+      });
 
-    setSaving(false);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "Error al guardar.");
+        return;
+      }
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? "Error al guardar.");
-      return;
+      setSavedPrediction({ home, away });
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 3000);
+    } catch {
+      setError("Sin conexión. Verifica tu red e intenta de nuevo.");
+    } finally {
+      setSaving(false);
     }
-
-    setSavedPrediction({ home, away });
-    setJustSaved(true);
-    setTimeout(() => setJustSaved(false), 3000);
   }
 
   const isFinished = matchStatus === "finished";
