@@ -101,8 +101,8 @@ export function PredictionRow({
           )}
         </td>
         <td className="py-2.5 text-right">
-          {!deadlinePassed && (
-            editing ? (
+          {editing ? (
+            <span className="inline-flex flex-col items-end gap-1">
               <span className="inline-flex gap-1">
                 <Button size="sm" className="h-7 px-2 text-xs" onClick={handleSave} disabled={loading}>
                   {loading && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
@@ -112,14 +112,17 @@ export function PredictionRow({
                   Cancelar
                 </Button>
               </span>
-            ) : (
-              <Button
-                size="sm" variant="ghost" className="h-7 px-2 text-xs"
-                onClick={() => setEditing(true)}
-              >
-                {hasPred ? "Modificar" : "Cargar pronóstico"}
-              </Button>
-            )
+              {deadlinePassed && (
+                <span className="text-[10px] text-amber-500">fuera de plazo</span>
+              )}
+            </span>
+          ) : (
+            <Button
+              size="sm" variant="ghost" className="h-7 px-2 text-xs"
+              onClick={() => setEditing(true)}
+            >
+              {hasPred ? "Modificar" : "Cargar pronóstico"}
+            </Button>
           )}
           {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
         </td>

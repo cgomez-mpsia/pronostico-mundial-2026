@@ -26,15 +26,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
   }
 
-  // Si se pasa participantId, verificar que el caller es admin (fallback WhatsApp)
-  if (targetParticipantId) {
-    const callerRow = await db.query.users.findFirst({
-      where: eq(users.id, user.id),
-      columns: { role: true },
-    });
-    if (callerRow?.role !== "admin") {
-      return NextResponse.json({ error: "Solo el admin puede ingresar pronósticos por terceros." }, { status: 403 });
-    }
+  // Verificar rol del caller una sola vez (necesario tanto para validar acceso como para el override de deadline)
+  const callerRow = targetParticipantId
+    ? await db.query.users.findFirst({ where: eq(users.id, user.id), columns: { role: true } })
+    : null;
+
+  if (targetParticipantId && callerRow?.role !== "admin") {
+    return NextResponse.json({ error: "Solo el admin puede ingresar pronósticos por terceros." }, { status: 403 });
   }
 
   // Verificar que el partido existe y está abierto
@@ -54,8 +52,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Verificar plazo server-side (BR-003, BR-004) — aplica a todos, incluido admin (UC007-A8)
-  if (new Date() >= match.deadlineAt) {
+  // El admin puede ingresar por terceros fuera de plazo (problemas técnicos del jugador).
+  // Su propio pronóstico respeta el deadline igual que cualquier participante.
+  const adminOverride = !!targetParticipantId && callerRow?.role === "admin";
+
+  if (!adminOverride && new Date() >= match.deadlineAt) {
     return NextResponse.json(
       { error: "El plazo para este partido ya cerró." },
       { status: 403 }
