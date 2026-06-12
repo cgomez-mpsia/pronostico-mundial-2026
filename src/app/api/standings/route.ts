@@ -29,8 +29,9 @@ export async function GET() {
   }
 
   const championTeam = alias(teams, "champion_team");
+  const finishedMatch = alias(matches, "finished_match");
 
-  // Official standings from finished match_points
+  // Official standings: solo puntos de partidos con status='finished'
   const rows = await db
     .select({
       participantId: participants.id,
@@ -39,11 +40,15 @@ export async function GET() {
       hasPaid: participants.hasPaid,
       championFlagUrl: championTeam.flagUrl,
       championTeamName: championTeam.name,
-      totalPoints: sql<number>`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`.as("total_points"),
+      totalPoints: sql<number>`
+        COALESCE(SUM(CASE WHEN ${finishedMatch.status} = 'finished' THEN ${matchPoints.totalPoints} ELSE 0 END), 0)
+        + ${participants.championPoints}
+      `.as("total_points"),
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
+    .leftJoin(finishedMatch, eq(finishedMatch.id, matchPoints.matchId))
     .leftJoin(championTeam, eq(participants.championTeamId, championTeam.id))
     .where(eq(participants.tournamentId, tournament.id))
     .groupBy(
