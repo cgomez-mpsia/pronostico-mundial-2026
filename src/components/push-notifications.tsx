@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff } from "lucide-react";
+import { Bell, BellOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -11,6 +11,17 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isInStandaloneMode() {
+  return (
+    ("standalone" in navigator && (navigator as { standalone?: boolean }).standalone === true) ||
+    window.matchMedia("(display-mode: standalone)").matches
+  );
+}
+
 type PermissionState = "default" | "granted" | "denied";
 
 export function PushNotifications() {
@@ -18,9 +29,17 @@ export function PushNotifications() {
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [showIOSBanner, setShowIOSBanner] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // iOS fuera de standalone: no soporta push, mostrar banner de instrucciones
+    if (isIOS() && !isInStandaloneMode()) {
+      setShowIOSBanner(true);
+      return;
+    }
+
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
     setSupported(true);
     setPermission(Notification.permission as PermissionState);
@@ -82,6 +101,26 @@ export function PushNotifications() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (showIOSBanner) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+        <span>
+          Para recibir recordatorios en iPhone, toca{" "}
+          <span className="font-semibold">Compartir</span>{" "}
+          <span className="font-mono">⎙</span> →{" "}
+          <span className="font-semibold">Agregar a pantalla de inicio</span>
+        </span>
+        <button
+          onClick={() => setShowIOSBanner(false)}
+          className="shrink-0 text-zinc-400 hover:text-zinc-600"
+          aria-label="Cerrar"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
   }
 
   if (!supported) return null;
