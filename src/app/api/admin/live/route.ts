@@ -5,7 +5,7 @@ import { users, matches, participants, predictions, matchPoints } from "@/db/sch
 import { eq } from "drizzle-orm";
 import { calculateMatchPoints } from "@/lib/points";
 
-const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish"] as const;
+const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish", "reopen"] as const;
 type LiveAction = (typeof LIVE_ACTIONS)[number];
 
 export async function POST(request: NextRequest) {
@@ -44,6 +44,17 @@ export async function POST(request: NextRequest) {
       .update(matches)
       .set({ status: "live", homeScore: 0, awayScore: 0 })
       .where(eq(matches.id, matchId));
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "reopen") {
+    if (match.status !== "finished") {
+      return NextResponse.json({ error: "Solo se puede reabrir partidos finalizados." }, { status: 400 });
+    }
+    await db.transaction(async (tx) => {
+      await tx.delete(matchPoints).where(eq(matchPoints.matchId, matchId));
+      await tx.update(matches).set({ status: "live" }).where(eq(matches.id, matchId));
+    });
     return NextResponse.json({ success: true });
   }
 

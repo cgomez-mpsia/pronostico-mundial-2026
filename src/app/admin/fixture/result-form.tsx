@@ -67,6 +67,7 @@ export function ResultForm({
   const [error, setError] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const isKnockout = stage !== "group";
   const homeNum = home === "" ? null : Number(home);
@@ -108,6 +109,17 @@ export function ResultForm({
 
   function handleCorrectClick() {
     setConfirmOpen(true);
+  }
+
+  async function handleReopen() {
+    setReopening(true);
+    const res = await fetch("/api/admin/live", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId, action: "reopen" }),
+    });
+    setReopening(false);
+    if (res.ok) onSuccess?.();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -153,13 +165,25 @@ export function ResultForm({
     onSuccess?.();
   }
 
-  // Finished state — show "Corregir resultado" button only
+  // Finished state — show correction + reopen options
   if (isFinished && !correcting) {
     return (
       <>
-        <Button type="button" variant="outline" size="sm" onClick={handleCorrectClick}>
-          Corregir resultado
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={handleCorrectClick}>
+            Corregir resultado
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-xs text-zinc-400 hover:text-zinc-600"
+            onClick={handleReopen}
+            disabled={reopening}
+          >
+            {reopening ? "Reabriendo…" : "Reabrir en vivo"}
+          </Button>
+        </div>
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
