@@ -30,6 +30,7 @@ export function PushNotifications() {
   const [loading, setLoading] = useState(false);
   const [supported, setSupported] = useState(false);
   const [showIOSBanner, setShowIOSBanner] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   function dismissIOSBanner() {
     localStorage.setItem("ios-banner-dismissed", "1");
@@ -44,6 +45,17 @@ export function PushNotifications() {
       const dismissed = localStorage.getItem("ios-banner-dismissed");
       if (!dismissed) setShowIOSBanner(true);
       return;
+    }
+
+    // Diagnóstico en iOS standalone
+    if (isIOS()) {
+      const hasSW = "serviceWorker" in navigator;
+      const hasPush = "PushManager" in window;
+      const hasNotif = "Notification" in window;
+      if (!hasSW || !hasPush) {
+        setDebugInfo(`SW:${hasSW} Push:${hasPush} Notif:${hasNotif}`);
+        return;
+      }
     }
 
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -107,6 +119,12 @@ export function PushNotifications() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (debugInfo) {
+    return (
+      <span className="text-[10px] text-amber-500">{debugInfo}</span>
+    );
   }
 
   if (showIOSBanner) {
