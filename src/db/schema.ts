@@ -140,6 +140,38 @@ export const matchPoints = pgTable(
   ]
 );
 
+// Una fila por dispositivo/navegador por usuario · Web Push API
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("push_subscriptions_endpoint_unique").on(t.endpoint),
+  ]
+);
+
+// Evita duplicados: una notif por (participante, partido, tipo) · BR-push
+export const notificationLog = pgTable(
+  "notification_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    participantId: uuid("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
+    matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+    // '2h' | '30min' | '15min'
+    type: text("type").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("notification_log_unique").on(t.participantId, t.matchId, t.type),
+  ]
+);
+
 // Tipos inferidos de Drizzle para usar en el resto de la app
 export type Tournament = typeof tournaments.$inferSelect;
 export type NewTournament = typeof tournaments.$inferInsert;

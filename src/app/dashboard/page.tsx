@@ -129,15 +129,94 @@ export default async function DashboardPage() {
   const predMap = new Map(userPredictions.map((p) => [p.matchId, p]));
   const now = new Date();
 
-  // Agrupar por etapa
-  const byStage = new Map<string, typeof matchRows>();
-  for (const m of matchRows) {
-    const list = byStage.get(m.stage) ?? [];
-    list.push(m);
-    byStage.set(m.stage, list);
+  const stageOrder = ["group", "r32", "r16", "qf", "sf", "third", "final"];
+
+  // Un partido finalizado se queda en la sección principal ~1 hora después de que termina.
+  // Como no hay finishedAt, usamos scheduledAt + 3h (90 min partido + 30 min buffer + 1h gracia).
+  const FINISHED_GRACE_MS = 3 * 60 * 60 * 1000;
+  const upcomingRows = matchRows.filter(
+    (m) => m.status !== "finished" || now.getTime() < m.scheduledAt.getTime() + FINISHED_GRACE_MS
+  );
+  const finishedRows = matchRows
+    .filter((m) => m.status === "finished" && now.getTime() >= m.scheduledAt.getTime() + FINISHED_GRACE_MS)
+    .reverse();
+
+  function buildStageGroups(rows: typeof matchRows) {
+    const byStage = new Map<string, typeof matchRows>();
+    for (const m of rows) {
+      const list = byStage.get(m.stage) ?? [];
+      list.push(m);
+      byStage.set(m.stage, list);
+    }
+    return byStage;
   }
 
-  const stageOrder = ["group", "r32", "r16", "qf", "sf", "third", "final"];
+  function renderStageGroups(rows: typeof matchRows) {
+    const byStage = buildStageGroups(rows);
+    return stageOrder.map((stage) => {
+      const stageMatches = byStage.get(stage);
+      if (!stageMatches?.length) return null;
+
+      const byDate = new Map<string, { label: string; matches: typeof stageMatches }>();
+      for (const m of stageMatches) {
+        const key = getBOTDateKey(m.scheduledAt);
+        if (!byDate.has(key)) {
+          byDate.set(key, { label: getBOTDateLabel(m.scheduledAt), matches: [] });
+        }
+        byDate.get(key)!.matches.push(m);
+      }
+
+      return (
+        <section key={stage} className="space-y-5">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            {STAGE_LABELS[stage] ?? stage}
+          </h2>
+          {Array.from(byDate.entries()).map(([dateKey, { label, matches: dayMatches }]) => (
+            <div key={dateKey} className="space-y-3">
+              <p className="border-b border-zinc-100 pb-1 text-xs font-medium capitalize text-zinc-400 dark:border-zinc-800">
+                {label}
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {dayMatches.map((m) => {
+                  const winnerName = m.matchWinnerId
+                    ? m.matchWinnerId === m.homeTeamId
+                      ? (m.homeTeamName ?? null)
+                      : (m.awayTeamName ?? null)
+                    : null;
+                  return (
+                    <PredictionCard
+                      key={m.matchId}
+                      matchId={m.matchId}
+                      homeTeamName={m.homeTeamName ?? "Por definir"}
+                      homeTeamCode={m.homeTeamCode ?? "TBD"}
+                      homeTeamFlagUrl={m.homeTeamFlagUrl ?? null}
+                      awayTeamName={m.awayTeamName ?? "Por definir"}
+                      awayTeamCode={m.awayTeamCode ?? "TBD"}
+                      awayTeamFlagUrl={m.awayTeamFlagUrl ?? null}
+                      stageLabel={STAGE_LABELS[m.stage] ?? m.stage}
+                      groupLabel={m.homeTeamGroupName ? `Grupo ${m.homeTeamGroupName}` : null}
+                      scheduledTimeLabel={formatBOTTime(m.scheduledAt)}
+                      deadlineAtLabel={formatBOT(m.deadlineAt)}
+                      isOpen={now < m.deadlineAt && m.status === "scheduled"}
+                      matchStatus={m.status}
+                      matchHomeScore={m.homeScore}
+                      matchAwayScore={m.awayScore}
+                      matchHomeScoreFull={m.homeScoreFull ?? null}
+                      matchAwayScoreFull={m.awayScoreFull ?? null}
+                      extraTime={m.extraTime ?? null}
+                      matchWinnerName={winnerName}
+                      prediction={predMap.get(m.matchId) ?? null}
+                      hasPaid={participant?.hasPaid ?? false}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </section>
+      );
+    });
+  }
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
@@ -161,70 +240,16 @@ export default async function DashboardPage() {
         </p>
       )}
 
-      {stageOrder.map((stage) => {
-        const stageMatches = byStage.get(stage);
-        if (!stageMatches?.length) return null;
+      {upcomingRows.length > 0 && renderStageGroups(upcomingRows)}
 
-        // Agrupar por día en BOT (el orden ya viene del ORDER BY scheduledAt)
-        const byDate = new Map<string, { label: string; matches: typeof stageMatches }>();
-        for (const m of stageMatches) {
-          const key = getBOTDateKey(m.scheduledAt);
-          if (!byDate.has(key)) {
-            byDate.set(key, { label: getBOTDateLabel(m.scheduledAt), matches: [] });
-          }
-          byDate.get(key)!.matches.push(m);
-        }
-
-        return (
-          <section key={stage} className="space-y-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              {STAGE_LABELS[stage] ?? stage}
-            </h2>
-            {Array.from(byDate.entries()).map(([dateKey, { label, matches: dayMatches }]) => (
-              <div key={dateKey} className="space-y-3">
-                <p className="border-b border-zinc-100 pb-1 text-xs font-medium capitalize text-zinc-400 dark:border-zinc-800">
-                  {label}
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {dayMatches.map((m) => {
-                    const winnerName = m.matchWinnerId
-                      ? m.matchWinnerId === m.homeTeamId
-                        ? (m.homeTeamName ?? null)
-                        : (m.awayTeamName ?? null)
-                      : null;
-                    return (
-                      <PredictionCard
-                        key={m.matchId}
-                        matchId={m.matchId}
-                        homeTeamName={m.homeTeamName ?? "Por definir"}
-                        homeTeamCode={m.homeTeamCode ?? "TBD"}
-                        homeTeamFlagUrl={m.homeTeamFlagUrl ?? null}
-                        awayTeamName={m.awayTeamName ?? "Por definir"}
-                        awayTeamCode={m.awayTeamCode ?? "TBD"}
-                        awayTeamFlagUrl={m.awayTeamFlagUrl ?? null}
-                        stageLabel={STAGE_LABELS[m.stage] ?? m.stage}
-                        groupLabel={m.homeTeamGroupName ? `Grupo ${m.homeTeamGroupName}` : null}
-                        scheduledTimeLabel={formatBOTTime(m.scheduledAt)}
-                        deadlineAtLabel={formatBOT(m.deadlineAt)}
-                        isOpen={now < m.deadlineAt && m.status === "scheduled"}
-                        matchStatus={m.status}
-                        matchHomeScore={m.homeScore}
-                        matchAwayScore={m.awayScore}
-                        matchHomeScoreFull={m.homeScoreFull ?? null}
-                        matchAwayScoreFull={m.awayScoreFull ?? null}
-                        extraTime={m.extraTime ?? null}
-                        matchWinnerName={winnerName}
-                        prediction={predMap.get(m.matchId) ?? null}
-                        hasPaid={participant?.hasPaid ?? false}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </section>
-        );
-      })}
+      {finishedRows.length > 0 && (
+        <div className="space-y-8 border-t border-zinc-100 pt-8 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            Partidos finalizados
+          </h2>
+          {renderStageGroups(finishedRows)}
+        </div>
+      )}
     </div>
   );
 }

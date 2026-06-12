@@ -60,7 +60,11 @@ export default async function MatchDetailPage({
       stage: matches.stage,
       tournamentId: matches.tournamentId,
       homeTeamName: homeTeamAlias.name,
+      homeTeamCode: homeTeamAlias.code,
+      homeTeamFlagUrl: homeTeamAlias.flagUrl,
       awayTeamName: awayTeamAlias.name,
+      awayTeamCode: awayTeamAlias.code,
+      awayTeamFlagUrl: awayTeamAlias.flagUrl,
     })
     .from(matches)
     .leftJoin(homeTeamAlias, eq(matches.homeTeamId, homeTeamAlias.id))
@@ -155,9 +159,14 @@ export default async function MatchDetailPage({
           {STAGE_LABELS[matchRows.stage] ?? matchRows.stage}
         </p>
         <div className="flex items-center gap-4">
-          <span className="text-lg font-semibold flex-1 text-right">
-            {matchRows.homeTeamName ?? "Por definir"}
-          </span>
+          <div className="flex flex-1 items-center justify-end gap-2">
+            <span className="text-lg font-semibold text-right">
+              {matchRows.homeTeamName ?? "Por definir"}
+            </span>
+            {matchRows.homeTeamFlagUrl && (
+              <img src={matchRows.homeTeamFlagUrl} alt="" className="h-5 w-7 shrink-0 rounded-sm object-cover" />
+            )}
+          </div>
           {isFinished ? (
             <div className="flex flex-col items-center">
               <span className="text-2xl font-bold tabular-nums">
@@ -170,9 +179,14 @@ export default async function MatchDetailPage({
           ) : (
             <span className="text-sm text-zinc-400 tabular-nums">vs</span>
           )}
-          <span className="text-lg font-semibold flex-1">
-            {matchRows.awayTeamName ?? "Por definir"}
-          </span>
+          <div className="flex flex-1 items-center justify-start gap-2">
+            {matchRows.awayTeamFlagUrl && (
+              <img src={matchRows.awayTeamFlagUrl} alt="" className="h-5 w-7 shrink-0 rounded-sm object-cover" />
+            )}
+            <span className="text-lg font-semibold">
+              {matchRows.awayTeamName ?? "Por definir"}
+            </span>
+          </div>
         </div>
         {isFinished && extraTimeBadge && winnerName && (
           <p className="text-center text-sm text-zinc-500">

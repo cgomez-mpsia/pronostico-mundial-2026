@@ -91,6 +91,7 @@ export function PredictionCard({
   }
 
   const isFinished = matchStatus === "finished";
+  const isLive = matchStatus === "live";
   const extraTimeBadge = extraTime === "pen" ? "pen." : extraTime === "aet" ? "a.e.t." : null;
 
   const displayHomeScore = extraTime && matchHomeScoreFull !== null ? matchHomeScoreFull : matchHomeScore;
@@ -121,6 +122,12 @@ export function PredictionCard({
               <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
             )}
           </div>
+        ) : isLive ? (
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold tabular-nums text-red-500">
+              {matchHomeScore ?? 0}{" — "}{matchAwayScore ?? 0}
+            </span>
+          </div>
         ) : (
           <span className="text-2xl font-bold tabular-nums text-zinc-400">
             {scheduledTimeLabel}
@@ -144,15 +151,20 @@ export function PredictionCard({
         </p>
       )}
 
-      {/* ── Fila 2: Meta — etapa · grupo · deadline / Finalizado ── */}
-      <p className="mt-1.5 text-center text-xs text-zinc-400">
+      {/* ── Fila 2: Meta — etapa · grupo · deadline / Finalizado / En vivo ── */}
+      <p className="mt-1.5 flex items-center justify-center gap-1 text-center text-xs text-zinc-400">
         {stageLabel}
         {groupLabel && <> · {groupLabel}</>}
-        {isFinished
-          ? <> · <span className="font-medium text-zinc-500">Finalizado</span></>
-          : isOpen
-            ? <> · Cierra: {deadlineAtLabel}</>
-            : null}
+        {isFinished ? (
+          <> · <span className="font-medium text-zinc-500">Finalizado</span></>
+        ) : isLive ? (
+          <> · <span className="inline-flex items-center gap-1 font-semibold text-red-500">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+            En vivo
+          </span></>
+        ) : isOpen ? (
+          <> · Cierra: {deadlineAtLabel}</>
+        ) : null}
       </p>
 
       {/* ── Pronóstico del usuario (partido cerrado o finalizado) ── */}

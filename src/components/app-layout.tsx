@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { LiveNotifications } from "@/components/live-notifications";
+import { PushNotifications } from "@/components/push-notifications";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface AppLayoutProps {
@@ -27,9 +28,10 @@ export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUr
       <SidebarInset>
         <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
           <SidebarTrigger />
-          <div className="ml-1">
+          <div className="ml-1 flex-1">
             <AppBreadcrumb />
           </div>
+          <PushNotifications />
         </header>
         <main className="flex-1">{children}</main>
       </SidebarInset>
