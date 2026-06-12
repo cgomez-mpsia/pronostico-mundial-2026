@@ -31,12 +31,18 @@ export function PushNotifications() {
   const [supported, setSupported] = useState(false);
   const [showIOSBanner, setShowIOSBanner] = useState(false);
 
+  function dismissIOSBanner() {
+    localStorage.setItem("ios-banner-dismissed", "1");
+    setShowIOSBanner(false);
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     // iOS fuera de standalone: no soporta push, mostrar banner de instrucciones
     if (isIOS() && !isInStandaloneMode()) {
-      setShowIOSBanner(true);
+      const dismissed = localStorage.getItem("ios-banner-dismissed");
+      if (!dismissed) setShowIOSBanner(true);
       return;
     }
 
@@ -113,7 +119,7 @@ export function PushNotifications() {
           <span className="font-semibold">Agregar a pantalla de inicio</span>
         </span>
         <button
-          onClick={() => setShowIOSBanner(false)}
+          onClick={dismissIOSBanner}
           className="shrink-0 text-zinc-400 hover:text-zinc-600"
           aria-label="Cerrar"
         >
