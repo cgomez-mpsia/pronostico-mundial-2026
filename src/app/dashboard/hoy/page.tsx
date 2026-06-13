@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { participants, tournaments, users, matches, predictions, matchPoints, teams } from "@/db/schema";
-import { eq, or, gte, lt, and, inArray } from "drizzle-orm";
+import { eq, or, gte, lt, and, inArray, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 function getBOTTodayBounds() {
@@ -136,7 +136,13 @@ export default async function HoyPage() {
             eq(matchPoints.matchId, matches.id)
           )
         )
-        .where(eq(participants.tournamentId, tournament.id))
+        // Activos siempre; abandonados solo si ya tenían pronóstico para ESE partido (historial)
+        .where(
+          and(
+            eq(participants.tournamentId, tournament.id),
+            or(isNull(participants.abandonedAt), isNotNull(predictions.id))
+          )
+        )
     : [];
 
   // Agrupar filas por matchId
