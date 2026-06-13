@@ -138,6 +138,18 @@ export default async function AdminMatchDetailPage({
   }
   const summaryText = summaryLines.join("\n");
 
+  // Texto para reportar por WhatsApp a quienes NO ingresaron pronóstico
+  const missingRows = rows.filter((r) => !r.isManuallyEntered);
+  const missingLines: string[] = [];
+  missingLines.push(`⚽ ${home} vs ${away}`);
+  missingLines.push(`${stageLine} · ${dateLine}`);
+  missingLines.push("");
+  missingLines.push(`Faltan pronosticar (${missingRows.length}/${rows.length}):`);
+  for (const r of missingRows) {
+    missingLines.push(`• ${r.fullName}`);
+  }
+  const missingText = missingLines.join("\n");
+
   return (
     <div className="space-y-6 p-6 lg:p-8 max-w-2xl">
       <Link href="/admin/fixture" className="text-xs text-zinc-400 hover:text-zinc-600">
@@ -178,6 +190,9 @@ export default async function AdminMatchDetailPage({
           <span>Partido: {formatBOT(matchRows.scheduledAt)}</span>
           <span>Deadline: {formatBOT(matchRows.deadlineAt)}</span>
           <CopyButton text={summaryText} />
+          {missingRows.length > 0 && (
+            <CopyButton text={missingText} label={`Copiar faltantes (${missingRows.length})`} />
+          )}
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, participants, tournaments, teams, matches, predictions, matchPoints } from "@/db/schema";
-import { eq, and, or, asc, desc, sql } from "drizzle-orm";
+import { eq, and, or, asc, desc, sql, lte, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfileTabs } from "./profile-tabs";
@@ -82,6 +82,34 @@ export default async function ProfilePage({
     .leftJoin(awayTeam, eq(matches.awayTeamId, awayTeam.id))
     .leftJoin(predictions, eq(matchPoints.predictionId, predictions.id))
     .where(eq(matchPoints.participantId, participant.id))
+    .orderBy(asc(matches.scheduledAt));
+
+  // Pronósticos de partidos ya cerrados (deadline pasado) pero aún SIN resultado
+  // registrado. No tienen match_points todavía, así que no aparecen en `breakdown`.
+  // Los mostramos para que el participante pueda verificar que su pronóstico quedó
+  // guardado tras el cierre, aunque aún no haya puntos. No cuentan en las estadísticas.
+  const now = new Date();
+  const pending = await db
+    .select({
+      matchId: predictions.matchId,
+      scheduledAt: matches.scheduledAt,
+      homeTeamName: homeTeam.name,
+      awayTeamName: awayTeam.name,
+      predHomeScore: predictions.homeScore,
+      predAwayScore: predictions.awayScore,
+      isManuallyEntered: predictions.isManuallyEntered,
+    })
+    .from(predictions)
+    .innerJoin(matches, eq(predictions.matchId, matches.id))
+    .leftJoin(homeTeam, eq(matches.homeTeamId, homeTeam.id))
+    .leftJoin(awayTeam, eq(matches.awayTeamId, awayTeam.id))
+    .where(
+      and(
+        eq(predictions.participantId, participant.id),
+        lte(matches.deadlineAt, now),
+        ne(matches.status, "finished")
+      )
+    )
     .orderBy(asc(matches.scheduledAt));
 
   // Stats calculadas en servidor
@@ -171,6 +199,14 @@ export default async function ProfilePage({
         }))}
         championPoints={participant.championPoints}
         myTotalPoints={myTotalPoints}
+        pending={pending.map((r) => ({
+          matchId: r.matchId,
+          homeTeamName: r.homeTeamName ?? "Por definir",
+          awayTeamName: r.awayTeamName ?? "Por definir",
+          predHomeScore: r.predHomeScore ?? null,
+          predAwayScore: r.predAwayScore ?? null,
+          isManuallyEntered: r.isManuallyEntered ?? false,
+        }))}
       />
     </div>
   );

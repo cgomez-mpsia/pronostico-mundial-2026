@@ -17,6 +17,15 @@ interface BreakdownRow {
   totalPoints: number;
 }
 
+interface PendingRow {
+  matchId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  predHomeScore: number | null;
+  predAwayScore: number | null;
+  isManuallyEntered: boolean;
+}
+
 interface ProfileTabsProps {
   championTeam: { name: string; flagUrl: string | null } | null;
   pctResult: number | null;
@@ -30,6 +39,7 @@ interface ProfileTabsProps {
   breakdown: BreakdownRow[];
   championPoints: number;
   myTotalPoints: number;
+  pending: PendingRow[];
 }
 
 type Tab = "resumen" | "desglose";
@@ -47,6 +57,7 @@ export function ProfileTabs({
   breakdown,
   championPoints,
   myTotalPoints,
+  pending,
 }: ProfileTabsProps) {
   const [active, setActive] = useState<Tab>("resumen");
 
@@ -128,7 +139,7 @@ export function ProfileTabs({
       {/* Tab: Desglose */}
       {active === "desglose" && (
         <div className="space-y-2">
-          {breakdown.length === 0 ? (
+          {breakdown.length === 0 && pending.length === 0 ? (
             <p className="text-sm text-zinc-400">
               Aún no hay partidos finalizados. Tu desglose de puntos aparecerá aquí.
             </p>
@@ -144,6 +155,28 @@ export function ProfileTabs({
                     </tr>
                   </thead>
                   <tbody>
+                    {/* Partidos cerrados sin resultado aún: pronóstico bloqueado, a la espera de calificación */}
+                    {pending.map((r) => (
+                      <tr
+                        key={r.matchId}
+                        className="border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+                      >
+                        <td className="px-4 py-2.5">
+                          <span className="font-medium">
+                            {r.homeTeamName} vs {r.awayTeamName}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-center text-zinc-500">
+                          {r.isManuallyEntered && r.predHomeScore !== null
+                            ? `${r.predHomeScore} - ${r.predAwayScore}`
+                            : "No pronosticó"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className="text-xs text-amber-500">Pendiente</span>
+                        </td>
+                      </tr>
+                    ))}
+
                     {breakdown.map((r) => (
                       <tr
                         key={r.matchId}
