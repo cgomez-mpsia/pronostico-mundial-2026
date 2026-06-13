@@ -57,13 +57,26 @@ export default async function AdminFixturePage() {
       .orderBy(asc(teams.name)),
   ]);
 
+  // Mismo criterio que el fixture de jugadores: un partido finalizado se queda en
+  // la sección principal ~1h tras terminar (scheduledAt + 3h de gracia), luego pasa
+  // a "Partidos finalizados" (más reciente primero).
+  const now = new Date();
+  const FINISHED_GRACE_MS = 3 * 60 * 60 * 1000;
+  const toClient = (rows: typeof matchRows) =>
+    rows.map((m) => ({ ...m, scheduledAt: m.scheduledAt.toISOString() }));
+
+  const upcoming = matchRows.filter(
+    (m) => m.status !== "finished" || now.getTime() < m.scheduledAt.getTime() + FINISHED_GRACE_MS
+  );
+  const finished = matchRows
+    .filter((m) => m.status === "finished" && now.getTime() >= m.scheduledAt.getTime() + FINISHED_GRACE_MS)
+    .reverse();
+
   return (
     <FixtureClient
       tournamentName={tournament.name}
-      matches={matchRows.map((m) => ({
-        ...m,
-        scheduledAt: m.scheduledAt.toISOString(),
-      }))}
+      upcomingMatches={toClient(upcoming)}
+      finishedMatches={toClient(finished)}
       teams={allTeams}
     />
   );

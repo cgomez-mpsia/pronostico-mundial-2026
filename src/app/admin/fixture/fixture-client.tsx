@@ -86,24 +86,18 @@ function toInputBOT(iso: string): string {
 
 interface Props {
   tournamentName: string;
-  matches: MatchRow[];
+  upcomingMatches: MatchRow[];
+  finishedMatches: MatchRow[];
   teams: Team[];
 }
 
-export function FixtureClient({ tournamentName, matches, teams }: Props) {
+export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches, teams }: Props) {
   const router = useRouter();
   const [mode, setMode] = useState<"list" | "add" | "edit">("list");
   const [editingMatch, setEditingMatch] = useState<EditingState | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
-  const byStage = new Map<string, MatchRow[]>();
-  for (const m of matches) {
-    const group = byStage.get(m.stage) ?? [];
-    group.push(m);
-    byStage.set(m.stage, group);
-  }
 
   async function handleDelete(matchId: string) {
     setDeleting(matchId);
@@ -130,6 +124,201 @@ export function FixtureClient({ tournamentName, matches, teams }: Props) {
     setMode("list");
     setEditingMatch(null);
     router.refresh();
+  }
+
+  function renderStages(rows: MatchRow[]) {
+    const byStage = new Map<string, MatchRow[]>();
+    for (const m of rows) {
+      const group = byStage.get(m.stage) ?? [];
+      group.push(m);
+      byStage.set(m.stage, group);
+    }
+
+    return STAGE_ORDER.map((stage) => {
+      const stageMatches = byStage.get(stage);
+      if (!stageMatches?.length) return null;
+      return (
+        <section key={stage} className="space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            {STAGE_LABELS[stage] ?? stage}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {stageMatches.map((m) => {
+              const homeName = m.homeTeamName ?? "Por definir";
+              const awayName = m.awayTeamName ?? "Por definir";
+              const extraTimeBadge =
+                m.extraTime === "pen" ? "pen." : m.extraTime === "aet" ? "a.e.t." : null;
+
+              return (
+                <div
+                  key={m.matchId}
+                  className="relative rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                  {/* Menú de acciones — esquina superior derecha */}
+                  <div className="absolute right-3 top-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+                        disabled={mode !== "list" && editingMatch?.matchId !== m.matchId}
+                      >
+                        ⋮
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push(`/admin/fixture/${m.matchId}`)}>
+                          Ver pronósticos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(m)}>
+                          Editar partido
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => setPendingDeleteId(m.matchId)}
+                          disabled={deleting === m.matchId}
+                        >
+                          {deleting === m.matchId ? "Eliminando…" : "Eliminar partido"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Hero: CSS Grid 3 cols — score siempre centrado */}
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-sm font-semibold sm:hidden">{m.homeTeamCode ?? "TBD"}</span>
+                      <span className="hidden text-sm font-semibold sm:block">{homeName}</span>
+                      {m.homeTeamFlagUrl && (
+                        <img src={m.homeTeamFlagUrl} alt="" className="h-4 w-6 shrink-0 rounded-sm object-cover" />
+                      )}
+                    </div>
+
+                    {m.status === "finished" ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl font-bold tabular-nums">
+                          {m.extraTime && m.homeScoreFull !== null ? m.homeScoreFull : m.homeScore}
+                          {" — "}
+                          {m.extraTime && m.awayScoreFull !== null ? m.awayScoreFull : m.awayScore}
+                        </span>
+                        {extraTimeBadge && (
+                          <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
+                        )}
+                      </div>
+                    ) : m.status === "live" ? (
+                      <div className="flex flex-col items-center">
+                        <span className="text-2xl font-bold tabular-nums text-red-500">
+                          {m.homeScore ?? 0}
+                          {" — "}
+                          {m.awayScore ?? 0}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold tabular-nums text-zinc-400">
+                        {formatBOTTime(m.scheduledAt)}
+                      </span>
+                    )}
+
+                    <div className="flex items-center justify-start gap-1.5">
+                      {m.awayTeamFlagUrl && (
+                        <img src={m.awayTeamFlagUrl} alt="" className="h-4 w-6 shrink-0 rounded-sm object-cover" />
+                      )}
+                      <span className="text-sm font-semibold sm:hidden">{m.awayTeamCode ?? "TBD"}</span>
+                      <span className="hidden text-sm font-semibold sm:block">{awayName}</span>
+                    </div>
+                  </div>
+
+                  {/* Meta: etapa + fecha sin hora + badges */}
+                  <div className="mt-2 space-y-0.5 text-center text-xs text-zinc-400">
+                    <p>{STAGE_LABELS[m.stage] ?? m.stage}</p>
+                    <p className="flex items-center justify-center gap-1.5">
+                      <span>{formatBOTDate(m.scheduledAt)}</span>
+                      {m.status === "finished" && (
+                        <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500 dark:bg-zinc-800">
+                          Finalizado
+                        </span>
+                      )}
+                      {m.status === "live" && (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400">
+                          🔴 En vivo
+                        </span>
+                      )}
+                      {(!m.homeTeamName || !m.awayTeamName) && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                          Por definir
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Separador */}
+                  <div className="my-3 border-t border-zinc-100 dark:border-zinc-800" />
+
+                  {/* Controles de resultado */}
+                  {m.status === "live" ? (
+                    <LiveControls
+                      matchId={m.matchId}
+                      status={m.status}
+                      homeScore={m.homeScore}
+                      awayScore={m.awayScore}
+                      homeTeamName={homeName}
+                      awayTeamName={awayName}
+                      onUpdate={() => router.refresh()}
+                    />
+                  ) : m.status === "finished" ? (
+                    <ResultForm
+                      matchId={m.matchId}
+                      stage={m.stage}
+                      homeTeamId={m.homeTeamId}
+                      awayTeamId={m.awayTeamId}
+                      homeTeamName={homeName}
+                      awayTeamName={awayName}
+                      currentHomeScore={m.homeScore}
+                      currentAwayScore={m.awayScore}
+                      currentHomeScoreFull={m.homeScoreFull}
+                      currentAwayScoreFull={m.awayScoreFull}
+                      currentExtraTime={m.extraTime}
+                      currentMatchWinnerId={m.matchWinnerId}
+                      isFinished={true}
+                      onSuccess={() => router.refresh()}
+                    />
+                  ) : (
+                    /* scheduled: live button + direct result entry */
+                    <div className="space-y-3">
+                      <LiveControls
+                        matchId={m.matchId}
+                        status={m.status}
+                        homeScore={m.homeScore}
+                        awayScore={m.awayScore}
+                        homeTeamName={homeName}
+                        awayTeamName={awayName}
+                        onUpdate={() => router.refresh()}
+                      />
+                      <div className="border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                        <ResultForm
+                          matchId={m.matchId}
+                          stage={m.stage}
+                          homeTeamId={m.homeTeamId}
+                          awayTeamId={m.awayTeamId}
+                          homeTeamName={homeName}
+                          awayTeamName={awayName}
+                          currentHomeScore={m.homeScore}
+                          currentAwayScore={m.awayScore}
+                          currentHomeScoreFull={m.homeScoreFull}
+                          currentAwayScoreFull={m.awayScoreFull}
+                          currentExtraTime={m.extraTime}
+                          currentMatchWinnerId={m.matchWinnerId}
+                          isFinished={false}
+                          onSuccess={() => router.refresh()}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      );
+    });
   }
 
   return (
@@ -172,196 +361,20 @@ export function FixtureClient({ tournamentName, matches, teams }: Props) {
         </Alert>
       )}
 
-      {matches.length === 0 && (
+      {upcomingMatches.length === 0 && finishedMatches.length === 0 && (
         <p className="text-sm text-zinc-400">No hay partidos cargados aún.</p>
       )}
 
-      {STAGE_ORDER.map((stage) => {
-        const stageMatches = byStage.get(stage);
-        if (!stageMatches?.length) return null;
-        return (
-          <section key={stage} className="space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              {STAGE_LABELS[stage] ?? stage}
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {stageMatches.map((m) => {
-                const homeName = m.homeTeamName ?? "Por definir";
-                const awayName = m.awayTeamName ?? "Por definir";
-                const extraTimeBadge =
-                  m.extraTime === "pen" ? "pen." : m.extraTime === "aet" ? "a.e.t." : null;
+      {upcomingMatches.length > 0 && renderStages(upcomingMatches)}
 
-                return (
-                  <div
-                    key={m.matchId}
-                    className="relative rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-                  >
-                    {/* Menú de acciones — esquina superior derecha */}
-                    <div className="absolute right-3 top-3">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
-                          disabled={mode !== "list" && editingMatch?.matchId !== m.matchId}
-                        >
-                          ⋮
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/admin/fixture/${m.matchId}`)}>
-                            Ver pronósticos
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(m)}>
-                            Editar partido
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
-                            onClick={() => setPendingDeleteId(m.matchId)}
-                            disabled={deleting === m.matchId}
-                          >
-                            {deleting === m.matchId ? "Eliminando…" : "Eliminar partido"}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    {/* Hero: CSS Grid 3 cols — score siempre centrado */}
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span className="text-sm font-semibold sm:hidden">{m.homeTeamCode ?? "TBD"}</span>
-                        <span className="hidden text-sm font-semibold sm:block">{homeName}</span>
-                        {m.homeTeamFlagUrl && (
-                          <img src={m.homeTeamFlagUrl} alt="" className="h-4 w-6 shrink-0 rounded-sm object-cover" />
-                        )}
-                      </div>
-
-                      {m.status === "finished" ? (
-                        <div className="flex flex-col items-center">
-                          <span className="text-2xl font-bold tabular-nums">
-                            {m.extraTime && m.homeScoreFull !== null ? m.homeScoreFull : m.homeScore}
-                            {" — "}
-                            {m.extraTime && m.awayScoreFull !== null ? m.awayScoreFull : m.awayScore}
-                          </span>
-                          {extraTimeBadge && (
-                            <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
-                          )}
-                        </div>
-                      ) : m.status === "live" ? (
-                        <div className="flex flex-col items-center">
-                          <span className="text-2xl font-bold tabular-nums text-red-500">
-                            {m.homeScore ?? 0}
-                            {" — "}
-                            {m.awayScore ?? 0}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-2xl font-bold tabular-nums text-zinc-400">
-                          {formatBOTTime(m.scheduledAt)}
-                        </span>
-                      )}
-
-                      <div className="flex items-center justify-start gap-1.5">
-                        {m.awayTeamFlagUrl && (
-                          <img src={m.awayTeamFlagUrl} alt="" className="h-4 w-6 shrink-0 rounded-sm object-cover" />
-                        )}
-                        <span className="text-sm font-semibold sm:hidden">{m.awayTeamCode ?? "TBD"}</span>
-                        <span className="hidden text-sm font-semibold sm:block">{awayName}</span>
-                      </div>
-                    </div>
-
-                    {/* Meta: etapa + fecha sin hora + badges */}
-                    <div className="mt-2 space-y-0.5 text-center text-xs text-zinc-400">
-                      <p>{STAGE_LABELS[m.stage] ?? m.stage}</p>
-                      <p className="flex items-center justify-center gap-1.5">
-                        <span>{formatBOTDate(m.scheduledAt)}</span>
-                        {m.status === "finished" && (
-                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-zinc-500 dark:bg-zinc-800">
-                            Finalizado
-                          </span>
-                        )}
-                        {m.status === "live" && (
-                          <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400">
-                            🔴 En vivo
-                          </span>
-                        )}
-                        {(!m.homeTeamName || !m.awayTeamName) && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
-                            Por definir
-                          </span>
-                        )}
-                      </p>
-                    </div>
-
-                    {/* Separador */}
-                    <div className="my-3 border-t border-zinc-100 dark:border-zinc-800" />
-
-                    {/* Controles de resultado */}
-                    {m.status === "live" ? (
-                      <LiveControls
-                        matchId={m.matchId}
-                        status={m.status}
-                        homeScore={m.homeScore}
-                        awayScore={m.awayScore}
-                        homeTeamName={homeName}
-                        awayTeamName={awayName}
-                        onUpdate={() => router.refresh()}
-                      />
-                    ) : m.status === "finished" ? (
-                      <ResultForm
-                        matchId={m.matchId}
-                        stage={m.stage}
-                        homeTeamId={m.homeTeamId}
-                        awayTeamId={m.awayTeamId}
-                        homeTeamName={homeName}
-                        awayTeamName={awayName}
-                        currentHomeScore={m.homeScore}
-                        currentAwayScore={m.awayScore}
-                        currentHomeScoreFull={m.homeScoreFull}
-                        currentAwayScoreFull={m.awayScoreFull}
-                        currentExtraTime={m.extraTime}
-                        currentMatchWinnerId={m.matchWinnerId}
-                        isFinished={true}
-                        onSuccess={() => router.refresh()}
-                      />
-                    ) : (
-                      /* scheduled: live button + direct result entry */
-                      <div className="space-y-3">
-                        <LiveControls
-                          matchId={m.matchId}
-                          status={m.status}
-                          homeScore={m.homeScore}
-                          awayScore={m.awayScore}
-                          homeTeamName={homeName}
-                          awayTeamName={awayName}
-                          onUpdate={() => router.refresh()}
-                        />
-                        <div className="border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                          <ResultForm
-                            matchId={m.matchId}
-                            stage={m.stage}
-                            homeTeamId={m.homeTeamId}
-                            awayTeamId={m.awayTeamId}
-                            homeTeamName={homeName}
-                            awayTeamName={awayName}
-                            currentHomeScore={m.homeScore}
-                            currentAwayScore={m.awayScore}
-                            currentHomeScoreFull={m.homeScoreFull}
-                            currentAwayScoreFull={m.awayScoreFull}
-                            currentExtraTime={m.extraTime}
-                            currentMatchWinnerId={m.matchWinnerId}
-                            isFinished={false}
-                            onSuccess={() => router.refresh()}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+      {finishedMatches.length > 0 && (
+        <div className="space-y-8 border-t border-zinc-100 pt-8 dark:border-zinc-800">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+            Partidos finalizados
+          </h2>
+          {renderStages(finishedMatches)}
+        </div>
+      )}
     </div>
 
       <AlertDialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
