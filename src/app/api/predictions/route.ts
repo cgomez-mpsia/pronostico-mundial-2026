@@ -70,19 +70,26 @@ export async function POST(request: NextRequest) {
           eq(participants.id, targetParticipantId),
           eq(participants.tournamentId, match.tournamentId)
         ),
-        columns: { id: true, hasPaid: true },
+        columns: { id: true, hasPaid: true, abandonedAt: true },
       })
     : await db.query.participants.findFirst({
         where: and(
           eq(participants.userId, user.id),
           eq(participants.tournamentId, match.tournamentId)
         ),
-        columns: { id: true, hasPaid: true },
+        columns: { id: true, hasPaid: true, abandonedAt: true },
       });
 
   if (!participant) {
     return NextResponse.json(
       { error: "No eres participante del torneo." },
+      { status: 403 }
+    );
+  }
+
+  if (participant.abandonedAt) {
+    return NextResponse.json(
+      { error: "Este participante abandonó el torneo." },
       { status: 403 }
     );
   }

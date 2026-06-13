@@ -47,6 +47,7 @@ export type ParticipantRow = {
   fullName: string;
   email: string;
   hasPaid: boolean;
+  abandonedAt: Date | null;
   joinedAt: Date;
   championCode: string | null;
   championFlagUrl: string | null;
@@ -70,6 +71,13 @@ export function ParticipantsTable({ rows }: Props) {
   const [pendingPayment, setPendingPayment] = useState<{
     participantId: string;
     hasPaid: boolean;
+    fullName: string;
+  } | null>(null);
+
+  // Abandon / reactivate confirm dialog
+  const [pendingAbandon, setPendingAbandon] = useState<{
+    participantId: string;
+    abandoned: boolean;
     fullName: string;
   } | null>(null);
 
@@ -128,6 +136,31 @@ export function ParticipantsTable({ rows }: Props) {
     router.refresh();
   }
 
+  async function confirmToggleAbandon() {
+    if (!pendingAbandon) return;
+    const { participantId, abandoned, fullName } = pendingAbandon;
+
+    setLoadingId(participantId);
+    const res = await fetch(`/api/admin/participants/${participantId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ abandoned: !abandoned }),
+    });
+    setLoadingId(null);
+    setPendingAbandon(null);
+
+    if (!res.ok) {
+      const data = await res.json();
+      toast.error(data.error ?? "Error al actualizar.");
+      return;
+    }
+
+    toast.success(
+      abandoned ? `${fullName} fue reactivado.` : `${fullName} marcado como abandonado.`
+    );
+    router.refresh();
+  }
+
   async function submitPasswordReset() {
     if (!resetTarget) return;
     const { participantId, fullName } = resetTarget;
@@ -170,7 +203,9 @@ export function ParticipantsTable({ rows }: Props) {
       : <ChevronDown className="ml-1 inline h-3.5 w-3.5" />;
   }
 
-  const paid = rows.filter((r) => r.hasPaid).length;
+  const activeRows = rows.filter((r) => !r.abandonedAt);
+  const paid = activeRows.filter((r) => r.hasPaid).length;
+  const abandonedCount = rows.length - activeRows.length;
 
   return (
     <>
@@ -178,7 +213,8 @@ export function ParticipantsTable({ rows }: Props) {
         {/* Toolbar */}
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-zinc-500">
-            {paid} pagados · {rows.length - paid} pendientes · {rows.length} total
+            {paid} pagados · {activeRows.length - paid} pendientes · {activeRows.length} activos
+            {abandonedCount > 0 && <> · {abandonedCount} abandonaron</>}
           </p>
           <Select value={filter} onValueChange={(v) => setFilter(v as "all" | "pending")}>
             <SelectTrigger className="h-8 w-40 text-xs">
@@ -228,8 +264,24 @@ export function ParticipantsTable({ rows }: Props) {
                 </TableRow>
               )}
               {sorted.map((r) => (
-                <TableRow key={r.participantId} className={loadingId === r.participantId ? "opacity-50" : ""}>
-                  <TableCell className="font-medium">{r.fullName}</TableCell>
+                <TableRow
+                  key={r.participantId}
+                  className={
+                    loadingId === r.participantId
+                      ? "opacity-50"
+                      : r.abandonedAt
+                        ? "opacity-60"
+                        : ""
+                  }
+                >
+                  <TableCell className="font-medium">
+                    {r.fullName}
+                    {r.abandonedAt && (
+                      <Badge variant="outline" className="ml-2 text-xs text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-800">
+                        Abandonó
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="hidden sm:table-cell text-zinc-500 text-sm">{r.email}</TableCell>
                   <TableCell>
                     {r.hasPaid ? (
@@ -276,6 +328,13 @@ export function ParticipantsTable({ rows }: Props) {
                         >
                           Resetear contraseña
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setPendingAbandon({ participantId: r.participantId, abandoned: !!r.abandonedAt, fullName: r.fullName })}
+                          className={r.abandonedAt ? "" : "text-amber-600 dark:text-amber-400"}
+                        >
+                          {r.abandonedAt ? "Reactivar participante" : "Marcar como abandonado"}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -302,6 +361,28 @@ export function ParticipantsTable({ rows }: Props) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmTogglePayment}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Abandon / reactivate confirm dialog */}
+      <AlertDialog open={pendingAbandon !== null} onOpenChange={(open) => { if (!open) setPendingAbandon(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingAbandon?.abandoned ? "¿Reactivar participante?" : "¿Marcar como abandonado?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAbandon?.abandoned
+                ? `${pendingAbandon?.fullName} volverá a aparecer en posiciones, premios y el pozo. Sus pronósticos quedan intactos.`
+                : `${pendingAbandon?.fullName} se quitará de las posiciones, del reparto del pozo y de las notificaciones. Su cuota se descuenta del pozo. Sus pronósticos pasados se conservan y la acción es reversible.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleAbandon}>
+              {pendingAbandon?.abandoned ? "Reactivar" : "Marcar como abandonado"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

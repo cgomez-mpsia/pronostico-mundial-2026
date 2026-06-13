@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { participants, users, tournaments, matchPoints } from "@/db/schema";
-import { eq, or, desc, sql } from "drizzle-orm";
+import { eq, or, and, desc, sql, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { calculatePrizes } from "@/lib/prizes";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,7 @@ export default async function AdminPrizesPage() {
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
-    .where(eq(participants.tournamentId, tournament.id))
+    .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
     .groupBy(participants.id, users.fullName, participants.hasPaid, participants.championPoints)
     .orderBy(
       desc(sql`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`)

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { tournaments, participants, users, matchPoints, teams, matches, predictions } from "@/db/schema";
-import { eq, or, sql, and, inArray } from "drizzle-orm";
+import { eq, or, sql, and, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { calculateMatchPoints } from "@/lib/points";
 
@@ -50,7 +50,7 @@ export async function GET() {
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
     .leftJoin(finishedMatch, eq(finishedMatch.id, matchPoints.matchId))
     .leftJoin(championTeam, eq(participants.championTeamId, championTeam.id))
-    .where(eq(participants.tournamentId, tournament.id))
+    .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
     .groupBy(
       participants.id,
       users.fullName,

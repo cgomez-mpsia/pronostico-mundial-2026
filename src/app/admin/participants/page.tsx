@@ -23,6 +23,7 @@ export default async function AdminParticipantsPage() {
           fullName: users.fullName,
           email: users.email,
           hasPaid: participants.hasPaid,
+          abandonedAt: participants.abandonedAt,
           joinedAt: participants.joinedAt,
           championCode: championTeam.code,
           championFlagUrl: championTeam.flagUrl,

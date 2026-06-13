@@ -50,6 +50,13 @@
       "when": 1781238244005,
       "tag": "0006_living_nightshade",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781380649673,
+      "tag": "0007_add_abandoned_at",
+      "breakpoints": true
     }
   ]
 }

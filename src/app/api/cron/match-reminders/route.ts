@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { matches, participants, predictions, pushSubscriptions, notificationLog, teams, tournaments } from "@/db/schema";
-import { eq, and, gte, lt, or, inArray, notExists } from "drizzle-orm";
+import { eq, and, gte, lt, or, inArray, notExists, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import webpush from "web-push";
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     const allParticipants = await db
       .select({ id: participants.id, userId: participants.userId })
       .from(participants)
-      .where(eq(participants.tournamentId, tournament.id));
+      .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)));
 
     for (const match of upcomingMatches) {
       const matchLabel = `${match.homeTeamName ?? "Local"} vs ${match.awayTeamName ?? "Visitante"}`;

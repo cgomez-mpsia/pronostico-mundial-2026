@@ -61,6 +61,10 @@ export const participants = pgTable(
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     tournamentId: uuid("tournament_id").notNull().references(() => tournaments.id, { onDelete: "cascade" }),
     hasPaid: boolean("has_paid").notNull().default(false),
+    // null = participante activo · fecha = abandonó el torneo (soft delete reversible).
+    // Un abandonado se excluye de posiciones, premios, pozo, umbral ≤8/>8 y
+    // notificaciones, pero conserva su historial (pronósticos de partidos ya jugados).
+    abandonedAt: timestamp("abandoned_at", { withTimezone: true }),
     // null = no ha elegido campeón aún · BR-010
     championTeamId: uuid("champion_team_id").references(() => teams.id),
     // +5 pts si acertó el campeón · separado de match_points (CHECK <= 3) · FSD-UC-008

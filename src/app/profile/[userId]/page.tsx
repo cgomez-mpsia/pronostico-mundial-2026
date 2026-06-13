@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, participants, tournaments, teams, matches, predictions, matchPoints } from "@/db/schema";
-import { eq, and, or, asc, desc, sql, lte, ne } from "drizzle-orm";
+import { eq, and, or, asc, desc, sql, lte, ne, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { UserAvatar } from "@/components/user-avatar";
 import { ProfileTabs } from "./profile-tabs";
@@ -43,7 +43,7 @@ export default async function ProfilePage({
       eq(participants.userId, profileUserId),
       eq(participants.tournamentId, tournament.id)
     ),
-    columns: { id: true, hasPaid: true, championPoints: true, championTeamId: true },
+    columns: { id: true, hasPaid: true, championPoints: true, championTeamId: true, abandonedAt: true },
   });
 
   if (!participant) notFound();
@@ -141,7 +141,7 @@ export default async function ProfilePage({
     })
     .from(participants)
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
-    .where(eq(participants.tournamentId, tournament.id))
+    .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
     .groupBy(participants.id, participants.championPoints)
     .orderBy(desc(sql`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`));
 
@@ -166,9 +166,18 @@ export default async function ProfilePage({
           size={80}
         />
         <div>
-          <h1 className="text-2xl font-semibold">{profileUser.fullName}</h1>
+          <h1 className="text-2xl font-semibold">
+            {profileUser.fullName}
+            {participant.abandonedAt && (
+              <span className="ml-2 align-middle rounded-full border border-amber-300 px-2 py-0.5 text-xs font-medium text-amber-600 dark:border-amber-800 dark:text-amber-400">
+                Abandonó
+              </span>
+            )}
+          </h1>
           <p className="text-sm text-zinc-500">
-            #{rank} · {myTotalPoints} pts
+            {participant.abandonedAt
+              ? `Fuera de competición · ${myTotalPoints} pts`
+              : `#${rank} · ${myTotalPoints} pts`}
           </p>
         </div>
       </div>

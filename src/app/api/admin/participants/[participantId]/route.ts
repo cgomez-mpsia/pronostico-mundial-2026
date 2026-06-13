@@ -23,8 +23,14 @@ export async function PATCH(
   const { participantId } = await params;
   const body = await req.json();
 
-  if (typeof body.hasPaid !== "boolean") {
-    return NextResponse.json({ error: "hasPaid (boolean) es requerido." }, { status: 400 });
+  const hasHasPaid = typeof body.hasPaid === "boolean";
+  const hasAbandoned = typeof body.abandoned === "boolean";
+
+  if (!hasHasPaid && !hasAbandoned) {
+    return NextResponse.json(
+      { error: "Se requiere hasPaid (boolean) o abandoned (boolean)." },
+      { status: 400 }
+    );
   }
 
   const participant = await db.query.participants.findFirst({
@@ -36,10 +42,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Participante no encontrado." }, { status: 404 });
   }
 
-  await db
-    .update(participants)
-    .set({ hasPaid: body.hasPaid })
-    .where(eq(participants.id, participantId));
+  // Soft delete reversible: abandoned=true marca la fecha; false reactiva (null).
+  const updates: Partial<typeof participants.$inferInsert> = {};
+  if (hasHasPaid) updates.hasPaid = body.hasPaid;
+  if (hasAbandoned) updates.abandonedAt = body.abandoned ? new Date() : null;
+
+  await db.update(participants).set(updates).where(eq(participants.id, participantId));
 
   return NextResponse.json({ ok: true });
 }

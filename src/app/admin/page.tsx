@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { participants, matches, predictions, tournaments } from "@/db/schema";
-import { eq, or, count, and } from "drizzle-orm";
+import { eq, or, count, and, isNull } from "drizzle-orm";
 import {
   Card,
   CardContent,
@@ -57,7 +57,7 @@ export default async function AdminPage() {
       db
         .select({ hasPaid: participants.hasPaid, total: count() })
         .from(participants)
-        .where(eq(participants.tournamentId, tournament.id))
+        .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
         .groupBy(participants.hasPaid),
       db
         .select({ status: matches.status, total: count() })

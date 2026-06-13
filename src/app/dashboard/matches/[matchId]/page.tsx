@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { participants, users, matches, predictions, matchPoints, teams, tournaments } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
@@ -113,7 +113,13 @@ export default async function MatchDetailPage({
       matchPoints,
       and(eq(matchPoints.participantId, participants.id), eq(matchPoints.matchId, matchId))
     )
-    .where(eq(participants.tournamentId, matchRows.tournamentId))
+    // Activos siempre; abandonados solo si ya tenían pronóstico para ESTE partido (historial)
+    .where(
+      and(
+        eq(participants.tournamentId, matchRows.tournamentId),
+        or(isNull(participants.abandonedAt), isNotNull(predictions.id))
+      )
+    )
     .orderBy(users.fullName);
 
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
