@@ -99,22 +99,20 @@ export async function GET(request: NextRequest) {
         patch.awayTeamId = teamByExt.get(api.awayTeam.id);
       }
 
-      // ── 3+4. Estado y resultado (respetan el override manual) ───────────────
-      if (ours.resultSource === "manual") {
-        summary.skippedManual++;
-        // aun así persistimos horarios/cuadro KO si cambiaron
-        if (Object.keys(patch).length > 0) {
-          patch.lastSyncedAt = now;
-          await db.update(matches).set(patch).where(eq(matches.id, ours.id));
-        }
-        continue;
-      }
-
+      // ── 3+4. Estado, marcador en vivo y resultado ──────────────────────────
+      // El override 'manual' protege el RESULTADO FINAL + puntos (la plata): el
+      // sync no finaliza ni recalcula un partido que el organizador controla.
+      // PERO el marcador parcial en vivo sí se espeja desde la API aunque esté
+      // en manual (decisión del cliente).
       const apiStatus = mapStatus(api.status);
+      const isManual = ours.resultSource === "manual";
 
       if (apiStatus === "finished") {
-        const result = mapResult(api);
-        if (result) {
+        const result = isManual ? null : mapResult(api);
+        if (isManual) {
+          // Resultado final bajo control del organizador → no tocar puntos.
+          summary.skippedManual++;
+        } else if (result) {
           const scoreChanged =
             ours.status !== "finished" ||
             ours.homeScore !== result.homeScore ||
@@ -150,13 +148,15 @@ export async function GET(request: NextRequest) {
           // y reintentamos en la próxima corrida cuando la API publique el score.
           summary.pendingScore++;
         }
-      } else {
-        // scheduled o live (no afecta puntos hasta finished)
-        if (apiStatus !== ours.status) {
+      } else if (ours.status !== "finished") {
+        // scheduled o live — nunca des-finalizamos un partido ya cerrado.
+        // El estado solo lo movemos en partidos NO manuales (el organizador
+        // controla el estado de los suyos).
+        if (!isManual && apiStatus !== ours.status) {
           patch.status = apiStatus;
           summary.statusUpdated++;
         }
-        // Espejar el marcador en vivo en CADA corrida (no solo al pasar a live),
+        // Espejar el marcador en vivo en CADA corrida (incluso en manual),
         // así el parcial se mantiene al día mientras el partido está en juego.
         if (
           apiStatus === "live" &&
