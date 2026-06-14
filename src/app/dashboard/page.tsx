@@ -6,6 +6,9 @@ import { participants, tournaments, teams, matches, predictions } from "@/db/sch
 import { eq, or, asc, and } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { PredictionCard } from "./prediction-card";
+import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
+
+const pairKey = (a?: string | null, b?: string | null) => (a && b ? [a, b].sort().join("|") : "");
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -130,6 +133,19 @@ export default async function DashboardPage() {
   const predMap = new Map(userPredictions.map((p) => [p.matchId, p]));
   const now = new Date();
 
+  // Minuto de juego (ESPN) para los partidos en vivo, indexado por par de códigos.
+  // Solo se consulta si hay algún partido en vivo.
+  const liveMinuteByPair = new Map<string, string>();
+  if (matchRows.some((m) => m.status === "live")) {
+    try {
+      for (const e of await fetchEspnMatches(espnDateWindow(now))) {
+        if (e.status === "live" && e.clock) liveMinuteByPair.set(pairKey(e.homeCode, e.awayCode), e.clock);
+      }
+    } catch {
+      /* ESPN caído → los cards muestran "En vivo" sin minuto */
+    }
+  }
+
   const stageOrder = ["group", "r32", "r16", "qf", "sf", "third", "final"];
 
   // Un partido finalizado se queda en la sección principal ~1 hora después de que termina.
@@ -206,6 +222,7 @@ export default async function DashboardPage() {
                       matchAwayScoreFull={m.awayScoreFull ?? null}
                       extraTime={m.extraTime ?? null}
                       matchWinnerName={winnerName}
+                      liveMinute={m.status === "live" ? liveMinuteByPair.get(pairKey(m.homeTeamCode, m.awayTeamCode)) ?? null : null}
                       prediction={predMap.get(m.matchId) ?? null}
                       hasPaid={participant?.hasPaid ?? false}
                     />

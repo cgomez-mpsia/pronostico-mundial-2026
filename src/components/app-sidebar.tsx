@@ -9,6 +9,7 @@ import {
   Trophy,
   Star,
   BookOpen,
+  LayoutGrid,
   User,
   Users,
   Coins,
@@ -46,6 +47,7 @@ interface AppSidebarProps {
 const participantNav = [
   { href: "/dashboard", label: "Fixture", icon: CalendarDays },
   { href: "/dashboard/hoy", label: "Hoy", icon: Flame },
+  { href: "/dashboard/grupos", label: "Grupos", icon: LayoutGrid },
   { href: "/dashboard/standings", label: "Tabla de Posiciones", icon: Trophy },
   { href: "/dashboard/champion", label: "Mi Campeón", icon: Star },
   { href: "/reglas", label: "Reglas", icon: BookOpen },

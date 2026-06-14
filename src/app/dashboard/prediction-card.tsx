@@ -30,6 +30,7 @@ interface Props {
   matchAwayScoreFull: number | null;
   extraTime: string | null;
   matchWinnerName: string | null;
+  liveMinute?: string | null;
   prediction: Prediction | null;
   hasPaid: boolean;
 }
@@ -54,6 +55,7 @@ export function PredictionCard({
   matchAwayScoreFull,
   extraTime,
   matchWinnerName,
+  liveMinute,
   prediction,
   hasPaid,
 }: Props) {
@@ -173,7 +175,7 @@ export function PredictionCard({
         ) : isLive ? (
           <> · <span className="inline-flex items-center gap-1 font-semibold text-red-500">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-            En vivo
+            En vivo{liveMinute ? ` · ${liveMinute}` : ""}
           </span></>
         ) : isOpen ? (
           <> · Cierra: {deadlineAtLabel}</>
@@ -254,12 +256,16 @@ export function PredictionCard({
 
       {/* Link a detalle */}
       {!isOpen && (
-        <div className="mt-2 text-center">
+        <div className="mt-2.5 text-center">
           <Link
             href={`/dashboard/matches/${matchId}`}
-            className="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            className={
+              isLive
+                ? "inline-block rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+                : "text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }
           >
-            Ver pronósticos →
+            {isLive ? "Seguir en vivo · goles →" : isFinished ? "Ver detalle y pronósticos →" : "Ver pronósticos →"}
           </Link>
         </div>
       )}
