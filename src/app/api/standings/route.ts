@@ -35,6 +35,7 @@ export async function GET() {
   const rows = await db
     .select({
       participantId: participants.id,
+      userId: participants.userId,
       fullName: users.fullName,
       avatarUrl: users.avatarUrl,
       hasPaid: participants.hasPaid,
@@ -53,6 +54,7 @@ export async function GET() {
     .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
     .groupBy(
       participants.id,
+      participants.userId,
       users.fullName,
       users.avatarUrl,
       participants.hasPaid,
@@ -111,6 +113,7 @@ export async function GET() {
   const standings = rows.map((row) => ({
     rank: 0,
     participantId: row.participantId,
+    userId: row.userId,
     fullName: row.fullName,
     avatarUrl: row.avatarUrl ?? null,
     championFlagUrl: row.championFlagUrl ?? null,

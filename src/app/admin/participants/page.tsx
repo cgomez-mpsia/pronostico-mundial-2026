@@ -20,6 +20,7 @@ export default async function AdminParticipantsPage() {
     ? await db
         .select({
           participantId: participants.id,
+          userId: participants.userId,
           fullName: users.fullName,
           email: users.email,
           hasPaid: participants.hasPaid,

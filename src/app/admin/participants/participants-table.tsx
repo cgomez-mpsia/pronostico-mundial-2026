@@ -41,9 +41,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { OnlineDot } from "@/components/online-presence";
 
 export type ParticipantRow = {
   participantId: string;
+  userId: string;
   fullName: string;
   email: string;
   hasPaid: boolean;
@@ -276,6 +278,7 @@ export function ParticipantsTable({ rows }: Props) {
                 >
                   <TableCell className="font-medium">
                     {r.fullName}
+                    <OnlineDot userId={r.userId} className="ml-1.5 align-middle" />
                     {r.abandonedAt && (
                       <Badge variant="outline" className="ml-2 text-xs text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-800">
                         Abandonó

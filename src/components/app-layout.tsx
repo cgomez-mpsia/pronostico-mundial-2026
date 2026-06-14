@@ -2,6 +2,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { LiveNotifications } from "@/components/live-notifications";
 import { PushNotifications } from "@/components/push-notifications";
+import { PresenceProvider, OnlineCount } from "@/components/online-presence";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface AppLayoutProps {
@@ -16,26 +17,29 @@ interface AppLayoutProps {
 
 export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUrl, championTeamName, children }: AppLayoutProps) {
   return (
-    <SidebarProvider>
-      <AppSidebar
-        fullName={fullName}
-        avatarUrl={avatarUrl}
-        isAdmin={isAdmin}
-        userId={userId}
-        championFlagUrl={championFlagUrl}
-        championTeamName={championTeamName}
-      />
-      <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
-          <SidebarTrigger />
-          <div className="ml-1 flex-1">
-            <AppBreadcrumb />
-          </div>
-          <PushNotifications isAdmin={isAdmin} />
-        </header>
-        <main className="flex-1">{children}</main>
-      </SidebarInset>
-      <LiveNotifications />
-    </SidebarProvider>
+    <PresenceProvider userId={userId} fullName={fullName}>
+      <SidebarProvider>
+        <AppSidebar
+          fullName={fullName}
+          avatarUrl={avatarUrl}
+          isAdmin={isAdmin}
+          userId={userId}
+          championFlagUrl={championFlagUrl}
+          championTeamName={championTeamName}
+        />
+        <SidebarInset>
+          <header className="flex h-12 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
+            <SidebarTrigger />
+            <div className="ml-1 flex-1">
+              <AppBreadcrumb />
+            </div>
+            <OnlineCount />
+            <PushNotifications isAdmin={isAdmin} />
+          </header>
+          <main className="flex-1">{children}</main>
+        </SidebarInset>
+        <LiveNotifications />
+      </SidebarProvider>
+    </PresenceProvider>
   );
 }

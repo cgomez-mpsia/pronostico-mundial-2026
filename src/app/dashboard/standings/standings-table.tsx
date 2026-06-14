@@ -3,10 +3,12 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { OnlineDot } from "@/components/online-presence";
 
 interface Standing {
   rank: number;
   participantId: string;
+  userId: string;
   fullName: string;
   avatarUrl: string | null;
   championFlagUrl: string | null;
@@ -159,6 +161,7 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
                     />
                     <span className="font-medium">
                       {s.fullName}
+                      <OnlineDot userId={s.userId} className="ml-1.5 align-middle" />
                       {s.participantId === currentUserId && (
                         <span className="ml-2 text-xs text-zinc-400">(tú)</span>
                       )}
