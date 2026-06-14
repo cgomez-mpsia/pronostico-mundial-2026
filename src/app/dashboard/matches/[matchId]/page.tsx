@@ -6,6 +6,7 @@ import { eq, and, or, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
+import { fetchEspnByCodes, type EspnMatch } from "@/lib/espn";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -76,6 +77,19 @@ export default async function MatchDetailPage({
   const now = new Date();
   const deadlinePassed = now >= matchRows.deadlineAt;
   const isFinished = matchRows.status === "finished";
+  const isLive = matchRows.status === "live";
+
+  // Datos en vivo de ESPN (minuto + goleadores/tarjetas) para partidos en
+  // juego o finalizados; resiliente: si ESPN falla, la página igual funciona.
+  let espn: EspnMatch | null = null;
+  if ((isLive || isFinished) && matchRows.homeTeamCode && matchRows.awayTeamCode) {
+    try {
+      espn = await fetchEspnByCodes(matchRows.homeTeamCode, matchRows.awayTeamCode, matchRows.scheduledAt);
+    } catch {
+      espn = null;
+    }
+  }
+  const timeline = (espn?.plays ?? []).filter((p) => p.isGoal || p.isCard);
 
   const displayHomeScore = matchRows.extraTime && matchRows.homeScoreFull !== null
     ? matchRows.homeScoreFull
@@ -182,6 +196,15 @@ export default async function MatchDetailPage({
                 <span className="text-xs font-medium text-zinc-400">({extraTimeBadge})</span>
               )}
             </div>
+          ) : isLive ? (
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold tabular-nums text-red-500">
+                {matchRows.homeScore ?? 0} — {matchRows.awayScore ?? 0}
+              </span>
+              <span className="text-[10px] font-semibold uppercase text-red-500 animate-pulse">
+                ● {espn?.clock || "En vivo"}
+              </span>
+            </div>
           ) : (
             <span className="text-sm text-zinc-400 tabular-nums">vs</span>
           )}
@@ -209,6 +232,26 @@ export default async function MatchDetailPage({
           </div>
         )}
       </div>
+
+      {/* Goleadores y tarjetas (ESPN) */}
+      {timeline.length > 0 && (
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800">
+          <div className="border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Incidencias</h2>
+          </div>
+          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {timeline.map((p, i) => (
+              <li key={i} className="flex items-center gap-2.5 px-4 py-2 text-sm">
+                <span className="w-10 shrink-0 text-right tabular-nums text-zinc-400">{p.minute}</span>
+                <span className="shrink-0">
+                  {p.isGoal ? "⚽" : p.type.toLowerCase().includes("red") ? "🟥" : "🟨"}
+                </span>
+                <span className="truncate">{p.player || p.type}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Pre-deadline: solo contador */}
       {!deadlinePassed && !isFinished && (

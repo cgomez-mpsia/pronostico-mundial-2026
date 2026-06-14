@@ -8,6 +8,16 @@
 // el matching con nuestros partidos es por el par de códigos de equipo.
 
 const SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const STANDINGS = "https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings";
+
+// Gol / tarjeta / cambio dentro de un partido
+export type EspnPlay = {
+  minute: string; // "27'"
+  type: string; // "Goal", "Yellow Card", "Red Card", ...
+  player: string;
+  isGoal: boolean;
+  isCard: boolean;
+};
 
 export type EspnMatch = {
   espnId: string;
@@ -18,6 +28,8 @@ export type EspnMatch = {
   awayScore: number | null;
   status: "scheduled" | "live" | "finished";
   detail: string; // "FT", "AET", "HT", "45'", etc.
+  clock: string; // minuto de juego en vivo: "73'", "90'+6'"
+  plays: EspnPlay[]; // goles/tarjetas/cambios con minuto y jugador
 };
 
 type EspnCompetitor = {
@@ -26,11 +38,18 @@ type EspnCompetitor = {
   team?: { abbreviation?: string };
 };
 
+type EspnDetail = {
+  clock?: { displayValue?: string };
+  type?: { text?: string };
+  scoringPlay?: boolean;
+  athletesInvolved?: { displayName?: string }[];
+};
+
 type EspnEvent = {
   id: string;
   date: string;
-  status?: { type?: { state?: string; detail?: string } };
-  competitions?: { competitors?: EspnCompetitor[] }[];
+  status?: { displayClock?: string; type?: { state?: string; detail?: string } };
+  competitions?: { competitors?: EspnCompetitor[]; details?: EspnDetail[] }[];
 };
 
 /** "YYYYMMDD" en UTC, para el parámetro ?dates de ESPN. */
@@ -78,6 +97,17 @@ export async function fetchEspnMatches(dates: string[]): Promise<EspnMatch[]> {
       const awayCode = away?.team?.abbreviation;
       if (!homeCode || !awayCode) continue;
 
+      const plays: EspnPlay[] = (comp?.details ?? []).map((x) => {
+        const type = x.type?.text ?? "";
+        return {
+          minute: x.clock?.displayValue ?? "",
+          type,
+          player: (x.athletesInvolved ?? []).map((a) => a.displayName ?? "").filter(Boolean).join(", "),
+          isGoal: !!x.scoringPlay,
+          isCard: /card/i.test(type),
+        };
+      });
+
       seen.add(e.id);
       out.push({
         espnId: e.id,
@@ -88,9 +118,78 @@ export async function fetchEspnMatches(dates: string[]): Promise<EspnMatch[]> {
         awayScore: toScore(away?.score),
         status: mapStatus(e.status?.type?.state),
         detail: e.status?.type?.detail ?? "",
+        clock: e.status?.displayClock ?? "",
+        plays,
       });
     }
   }
 
   return out;
+}
+
+/** Trae el partido de ESPN que coincide con el par de códigos, en la fecha dada. */
+export async function fetchEspnByCodes(
+  homeCode: string,
+  awayCode: string,
+  date: Date
+): Promise<EspnMatch | null> {
+  const ms = await fetchEspnMatches([espnDate(date)]);
+  return (
+    ms.find(
+      (e) =>
+        (e.homeCode === homeCode && e.awayCode === awayCode) ||
+        (e.homeCode === awayCode && e.awayCode === homeCode)
+    ) ?? null
+  );
+}
+
+// ─── Tablas de grupos oficiales ───────────────────────────────────────────────
+
+export type EspnStanding = {
+  code: string;
+  rank: number;
+  pj: number;
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+  gd: string; // "+2"
+  pts: number;
+};
+
+type EspnStat = { name?: string; value?: number; displayValue?: string };
+
+/** Tablas oficiales de los 12 grupos, con el orden/tiebreakers de ESPN. */
+export async function fetchGroupStandings(): Promise<{ group: string; entries: EspnStanding[] }[]> {
+  const res = await fetch(STANDINGS, { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" });
+  if (!res.ok) return [];
+  const data = (await res.json()) as {
+    children?: { name?: string; standings?: { entries?: { team?: { abbreviation?: string }; stats?: EspnStat[] }[] } }[];
+  };
+
+  const groups: { group: string; entries: EspnStanding[] }[] = [];
+  for (const child of data.children ?? []) {
+    const group = (child.name ?? "").replace(/^Group\s+/i, "").trim();
+    const entries: EspnStanding[] = (child.standings?.entries ?? [])
+      .map((e) => {
+        const stat = (n: string) => e.stats?.find((s) => s.name === n);
+        const num = (n: string) => Number(stat(n)?.value ?? 0);
+        return {
+          code: e.team?.abbreviation ?? "",
+          rank: num("rank"),
+          pj: num("gamesPlayed"),
+          w: num("wins"),
+          d: num("ties"),
+          l: num("losses"),
+          gf: num("pointsFor"),
+          ga: num("pointsAgainst"),
+          gd: stat("pointDifferential")?.displayValue ?? String(num("pointDifferential")),
+          pts: num("points"),
+        };
+      })
+      .sort((a, b) => a.rank - b.rank);
+    if (entries.length) groups.push({ group, entries });
+  }
+  return groups;
 }
