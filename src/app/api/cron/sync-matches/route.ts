@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
     scheduleUpdated: 0,
     teamsFilled: 0,
     statusUpdated: 0,
+    liveScoreUpdated: 0,
     resultsApplied: 0,
     skippedManual: 0,
     // FINISHED en la API pero sin marcador todavía (free tier "scores delayed").
@@ -149,14 +150,23 @@ export async function GET(request: NextRequest) {
           // y reintentamos en la próxima corrida cuando la API publique el score.
           summary.pendingScore++;
         }
-      } else if (apiStatus !== ours.status) {
-        // scheduled ↔ live (sin tocar puntos)
-        patch.status = apiStatus;
-        summary.statusUpdated++;
-        // espejar marcador en vivo (delayed) cuando la API lo trae
-        if (apiStatus === "live" && api.score.fullTime.home != null && api.score.fullTime.away != null) {
+      } else {
+        // scheduled o live (no afecta puntos hasta finished)
+        if (apiStatus !== ours.status) {
+          patch.status = apiStatus;
+          summary.statusUpdated++;
+        }
+        // Espejar el marcador en vivo en CADA corrida (no solo al pasar a live),
+        // así el parcial se mantiene al día mientras el partido está en juego.
+        if (
+          apiStatus === "live" &&
+          api.score.fullTime.home != null &&
+          api.score.fullTime.away != null &&
+          (ours.homeScore !== api.score.fullTime.home || ours.awayScore !== api.score.fullTime.away)
+        ) {
           patch.homeScore = api.score.fullTime.home;
           patch.awayScore = api.score.fullTime.away;
+          summary.liveScoreUpdated++;
         }
       }
 
