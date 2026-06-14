@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, externalId: true },
+    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, externalId: true, lastSyncedAt: true },
   });
   if (!match) return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
 
@@ -43,9 +43,25 @@ export async function POST(request: NextRequest) {
     if (!match.externalId) {
       return NextResponse.json({ error: "Este partido no está vinculado a la API." }, { status: 400 });
     }
+
+    // Anti-spam: cada refresh consume una llamada a la API (límite 10/min del free
+    // tier). No permitir refrescar si se actualizó hace menos de COOLDOWN_MS.
+    const COOLDOWN_MS = 10_000;
+    if (match.lastSyncedAt && Date.now() - match.lastSyncedAt.getTime() < COOLDOWN_MS) {
+      const wait = Math.ceil((COOLDOWN_MS - (Date.now() - match.lastSyncedAt.getTime())) / 1000);
+      return NextResponse.json(
+        { error: `Recién actualizado. Esperá ${wait}s.`, retryAfter: wait },
+        { status: 429 }
+      );
+    }
+
     const apiMatches = await fetchWorldCupMatches();
     const api = apiMatches.find((m) => m.id === match.externalId);
+    // La llamada ya se consumió: marcamos el timestamp aunque no haya marcador,
+    // para que el cooldown también frene reintentos sobre un partido sin score.
+    const now = new Date();
     if (!api) {
+      await db.update(matches).set({ lastSyncedAt: now }).where(eq(matches.id, matchId));
       return NextResponse.json({ error: "No se encontró el partido en la API." }, { status: 404 });
     }
 
@@ -63,10 +79,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (home == null || away == null) {
+      await db.update(matches).set({ lastSyncedAt: now }).where(eq(matches.id, matchId));
       return NextResponse.json({ error: "La API aún no publica el marcador (puede tardar unos minutos)." }, { status: 409 });
     }
 
-    await db.update(matches).set({ homeScore: home, awayScore: away }).where(eq(matches.id, matchId));
+    await db.update(matches).set({ homeScore: home, awayScore: away, lastSyncedAt: now }).where(eq(matches.id, matchId));
     return NextResponse.json({ success: true, homeScore: home, awayScore: away });
   }
 

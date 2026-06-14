@@ -26,12 +26,20 @@ export function LiveControls({
   const [loading, setLoading] = useState<string | null>(null);
   const [localHome, setLocalHome] = useState(homeScore ?? 0);
   const [localAway, setLocalAway] = useState(awayScore ?? 0);
+  // Cooldown anti-spam del botón Actualizar (segundos restantes)
+  const [cooldown, setCooldown] = useState(0);
 
   // Sync when parent re-fetches and passes new props
   useEffect(() => {
     setLocalHome(homeScore ?? 0);
     setLocalAway(awayScore ?? 0);
   }, [homeScore, awayScore]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   async function callAction(action: string) {
     setLoading(action);
@@ -44,6 +52,8 @@ export function LiveControls({
 
     if (!res.ok) {
       const data = await res.json();
+      // Si el servidor pide esperar (throttle), arrancamos el cooldown local
+      if (res.status === 429 && typeof data.retryAfter === "number") setCooldown(data.retryAfter);
       toast.error(data.error ?? "Error");
       return;
     }
@@ -54,7 +64,10 @@ export function LiveControls({
     if (data.awayScore !== undefined) setLocalAway(data.awayScore);
 
     if (action === "start") toast.success("Partido iniciado en vivo");
-    if (action === "refresh") toast.success(`Marcador actualizado · ${data.homeScore}-${data.awayScore}`);
+    if (action === "refresh") {
+      setCooldown(10);
+      toast.success(`Marcador actualizado · ${data.homeScore}-${data.awayScore}`);
+    }
     if (action === "finish") {
       toast.success(`Partido finalizado · ${data.participantCount} participantes calculados`);
     }
@@ -102,9 +115,13 @@ export function LiveControls({
         size="sm"
         className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
         onClick={() => callAction("refresh")}
-        disabled={!!loading}
+        disabled={!!loading || cooldown > 0}
       >
-        {loading === "refresh" ? "Actualizando…" : "🔄 Actualizar marcador"}
+        {loading === "refresh"
+          ? "Actualizando…"
+          : cooldown > 0
+            ? `Esperá ${cooldown}s`
+            : "🔄 Actualizar marcador"}
       </Button>
       <p className="text-center text-[11px] text-zinc-400">
         Baja el marcador en vivo de football-data.org. También se actualiza solo cada pocos minutos.
