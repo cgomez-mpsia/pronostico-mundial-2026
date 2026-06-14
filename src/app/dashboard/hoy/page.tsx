@@ -5,6 +5,9 @@ import { db } from "@/db";
 import { participants, tournaments, users, matches, predictions, matchPoints, teams } from "@/db/schema";
 import { eq, or, gte, lt, and, inArray, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
+
+const hoyPairKey = (a?: string | null, b?: string | null) => (a && b ? [a, b].sort().join("|") : "");
 
 function getBOTTodayBounds() {
   // BOT = UTC-4 → midnight BOT = 04:00 UTC
@@ -174,6 +177,18 @@ export default async function HoyPage() {
 
   const hasFinished = todayMatches.some((m) => m.status === "finished");
 
+  // Minuto de juego (ESPN) para los partidos en vivo de hoy, por par de códigos
+  const liveMinuteByPair = new Map<string, string>();
+  if (todayMatches.some((m) => m.status === "live")) {
+    try {
+      for (const e of await fetchEspnMatches(espnDateWindow(new Date()))) {
+        if (e.status === "live" && e.clock) liveMinuteByPair.set(hoyPairKey(e.homeCode, e.awayCode), e.clock);
+      }
+    } catch {
+      /* ESPN caído → "En vivo" sin minuto */
+    }
+  }
+
   return (
     <div className="space-y-8 p-6 lg:p-8 max-w-2xl">
       <div>
@@ -242,6 +257,8 @@ export default async function HoyPage() {
         )}
         {todayMatches.map((m) => {
           const isFinished = m.status === "finished";
+          const isLive = m.status === "live";
+          const liveMinute = isLive ? liveMinuteByPair.get(hoyPairKey(m.homeTeamCode, m.awayTeamCode)) : null;
           const now = new Date();
           const deadlinePassed = now >= m.deadlineAt;
           const displayHome = m.extraTime && m.homeScoreFull !== null ? m.homeScoreFull : m.homeScore;
@@ -274,6 +291,12 @@ export default async function HoyPage() {
                         <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
                       )}
                     </div>
+                  ) : isLive ? (
+                    <div className="flex flex-col items-center">
+                      <span className="text-2xl font-bold tabular-nums text-red-500">
+                        {m.homeScore ?? 0}{" — "}{m.awayScore ?? 0}
+                      </span>
+                    </div>
                   ) : (
                     <span className="text-2xl font-bold tabular-nums text-zinc-400">
                       {formatBOTTime(m.scheduledAt)}
@@ -288,9 +311,15 @@ export default async function HoyPage() {
                     <span className="hidden text-sm font-semibold sm:block">{m.awayTeamName ?? "Por definir"}</span>
                   </div>
                 </div>
-                <p className="mt-1 text-center text-xs text-zinc-400">
+                <p className="mt-1 flex items-center justify-center gap-1 text-center text-xs text-zinc-400">
                   {STAGE_LABELS[m.stage] ?? m.stage}
                   {isFinished && <> · <span className="font-medium text-zinc-500">Finalizado</span></>}
+                  {isLive && (
+                    <> · <span className="inline-flex items-center gap-1 font-semibold text-red-500">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                      En vivo{liveMinute ? ` · ${liveMinute}` : ""}
+                    </span></>
+                  )}
                 </p>
               </div>
 
