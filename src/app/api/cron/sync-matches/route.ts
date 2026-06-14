@@ -69,6 +69,9 @@ export async function GET(request: NextRequest) {
     statusUpdated: 0,
     resultsApplied: 0,
     skippedManual: 0,
+    // FINISHED en la API pero sin marcador todavía (free tier "scores delayed").
+    // Es esperado y auto-resuelve en la próxima corrida; NO es un error.
+    pendingScore: 0,
     errors: [] as string[],
   };
 
@@ -142,7 +145,9 @@ export async function GET(request: NextRequest) {
             continue;
           }
         } else {
-          summary.errors.push(`match ${api.id}: FINISHED sin marcador utilizable`);
+          // FINISHED sin marcador aún: no tocamos el estado (se queda como estaba)
+          // y reintentamos en la próxima corrida cuando la API publique el score.
+          summary.pendingScore++;
         }
       } else if (apiStatus !== ours.status) {
         // scheduled ↔ live (sin tocar puntos)
