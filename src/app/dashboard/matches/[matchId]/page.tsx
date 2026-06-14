@@ -6,6 +6,7 @@ import { eq, and, or, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
+import { FixtureRealtime } from "@/app/dashboard/fixture-realtime";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -154,6 +155,7 @@ export default async function MatchDetailPage({
 
   return (
     <div className="space-y-6 p-6 lg:p-8 max-w-2xl">
+      <FixtureRealtime />
       {/* Back */}
       <Link href="/dashboard" className="text-xs text-zinc-400 hover:text-zinc-600">
         ← Volver al fixture
