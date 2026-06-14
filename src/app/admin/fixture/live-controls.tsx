@@ -109,11 +109,58 @@ export function LiveControls({
         </div>
       </div>
 
-      {/* Actualizar desde la API (reemplaza el conteo manual de goles) */}
+      {/* Conteo manual de goles (instantáneo, sin depender de la API) */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Button
+            type="button"
+            size="sm"
+            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+            onClick={() => callAction("goal_home")}
+            disabled={!!loading}
+          >
+            {loading === "goal_home" ? "…" : "⚽ Gol Local"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="w-full text-xs text-zinc-400 hover:text-zinc-600"
+            onClick={() => callAction("undo_home")}
+            disabled={!!loading || localHome === 0}
+          >
+            ← Deshacer
+          </Button>
+        </div>
+        <div className="space-y-1">
+          <Button
+            type="button"
+            size="sm"
+            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+            onClick={() => callAction("goal_away")}
+            disabled={!!loading}
+          >
+            {loading === "goal_away" ? "…" : "⚽ Gol Visit."}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="w-full text-xs text-zinc-400 hover:text-zinc-600"
+            onClick={() => callAction("undo_away")}
+            disabled={!!loading || localAway === 0}
+          >
+            ← Deshacer
+          </Button>
+        </div>
+      </div>
+
+      {/* Actualizar desde ESPN (alternativa al conteo manual) */}
       <Button
         type="button"
         size="sm"
-        className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+        variant="outline"
+        className="w-full"
         onClick={() => callAction("refresh")}
         disabled={!!loading || cooldown > 0}
       >
@@ -121,10 +168,10 @@ export function LiveControls({
           ? "Actualizando…"
           : cooldown > 0
             ? `Esperá ${cooldown}s`
-            : "🔄 Actualizar marcador"}
+            : "🔄 Traer marcador de ESPN"}
       </Button>
       <p className="text-center text-[11px] text-zinc-400">
-        Baja el marcador en vivo de football-data.org. También se actualiza solo cada pocos minutos.
+        Contá los goles a mano (instantáneo) o traé el marcador de ESPN. También se sincroniza solo cada pocos minutos.
       </p>
 
       {/* Finish */}

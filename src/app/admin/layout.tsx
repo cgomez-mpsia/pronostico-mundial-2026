@@ -27,7 +27,6 @@ export default async function AdminLayout({
       userId={user.id}
       championFlagUrl={data.championFlagUrl}
       championTeamName={data.championTeamName}
-      teams={data.teams}
     >
       {children}
     </AppLayout>

@@ -25,7 +25,6 @@ export default async function DashboardLayout({
       userId={user.id}
       championFlagUrl={data.championFlagUrl}
       championTeamName={data.championTeamName}
-      teams={data.teams}
     >
       {children}
     </AppLayout>

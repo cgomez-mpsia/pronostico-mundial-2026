@@ -1,9 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { LiveNotifications } from "@/components/live-notifications";
 import { PushNotifications } from "@/components/push-notifications";
 import { PresenceProvider, OnlineCount } from "@/components/online-presence";
-import { LiveToasts } from "@/components/live-toasts";
+import { LiveUpdates } from "@/components/live-updates";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface AppLayoutProps {
@@ -13,14 +12,14 @@ interface AppLayoutProps {
   userId: string;
   championFlagUrl?: string | null;
   championTeamName?: string | null;
-  teams?: Record<string, { name: string; code: string }>;
   children: React.ReactNode;
 }
 
-export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUrl, championTeamName, teams = {}, children }: AppLayoutProps) {
+export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUrl, championTeamName, children }: AppLayoutProps) {
   return (
     <PresenceProvider userId={userId} fullName={fullName}>
-      <LiveToasts teams={teams} currentUserId={userId} />
+      {/* Entrega de actualizaciones en vivo por polling (gol/inicio/final/posición) */}
+      <LiveUpdates currentUserId={userId} />
       <SidebarProvider>
         <AppSidebar
           fullName={fullName}
@@ -41,7 +40,6 @@ export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUr
           </header>
           <main className="flex-1">{children}</main>
         </SidebarInset>
-        <LiveNotifications />
       </SidebarProvider>
     </PresenceProvider>
   );

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { users, matches, matchPoints } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { users, matches, matchPoints, teams } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { applyMatchResult } from "@/lib/apply-result";
-import { fetchWorldCupMatches, mapStatus, mapResult } from "@/lib/football-data";
+import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
 
 const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish", "reopen", "refresh"] as const;
 type LiveAction = (typeof LIVE_ACTIONS)[number];
@@ -33,19 +33,18 @@ export async function POST(request: NextRequest) {
 
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, externalId: true, lastSyncedAt: true },
+    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, homeTeamId: true, awayTeamId: true, lastSyncedAt: true },
   });
   if (!match) return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
 
-  // Bajar el marcador actual desde football-data.org y escribirlo (sin finalizar
-  // ni calcular puntos — eso lo hace "Finalizar partido"). Reemplaza el conteo manual.
+  // Bajar el marcador actual desde ESPN y escribirlo (sin finalizar ni calcular
+  // puntos — eso lo hace "Finalizar partido"). Complementa el conteo manual.
   if (action === "refresh") {
-    if (!match.externalId) {
-      return NextResponse.json({ error: "Este partido no está vinculado a la API." }, { status: 400 });
+    if (!match.homeTeamId || !match.awayTeamId) {
+      return NextResponse.json({ error: "El partido aún no tiene equipos definidos." }, { status: 400 });
     }
 
-    // Anti-spam: cada refresh consume una llamada a la API (límite 10/min del free
-    // tier). No permitir refrescar si se actualizó hace menos de COOLDOWN_MS.
+    // Anti-spam: no refrescar si se actualizó hace menos de COOLDOWN_MS.
     const COOLDOWN_MS = 10_000;
     if (match.lastSyncedAt && Date.now() - match.lastSyncedAt.getTime() < COOLDOWN_MS) {
       const wait = Math.ceil((COOLDOWN_MS - (Date.now() - match.lastSyncedAt.getTime())) / 1000);
@@ -55,32 +54,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiMatches = await fetchWorldCupMatches();
-    const api = apiMatches.find((m) => m.id === match.externalId);
-    // La llamada ya se consumió: marcamos el timestamp aunque no haya marcador,
-    // para que el cooldown también frene reintentos sobre un partido sin score.
+    // Códigos de equipo para matchear con ESPN
+    const teamRows = await db
+      .select({ id: teams.id, code: teams.code })
+      .from(teams)
+      .where(inArray(teams.id, [match.homeTeamId, match.awayTeamId]));
+    const codeById = new Map(teamRows.map((t) => [t.id, t.code]));
+    const homeCode = codeById.get(match.homeTeamId);
+    const awayCode = codeById.get(match.awayTeamId);
+
     const now = new Date();
-    if (!api) {
+    const events = await fetchEspnMatches(espnDateWindow(now));
+    const ev = events.find(
+      (e) =>
+        (e.homeCode === homeCode && e.awayCode === awayCode) ||
+        (e.homeCode === awayCode && e.awayCode === homeCode)
+    );
+    if (!ev) {
       await db.update(matches).set({ lastSyncedAt: now }).where(eq(matches.id, matchId));
-      return NextResponse.json({ error: "No se encontró el partido en la API." }, { status: 404 });
+      return NextResponse.json({ error: "No se encontró el partido en ESPN (¿todavía no arrancó?)." }, { status: 404 });
     }
 
-    let home: number | null = null;
-    let away: number | null = null;
-    if (mapStatus(api.status) === "finished") {
-      const r = mapResult(api);
-      if (r) {
-        home = r.homeScore;
-        away = r.awayScore;
-      }
-    } else if (api.score.fullTime.home != null && api.score.fullTime.away != null) {
-      home = api.score.fullTime.home;
-      away = api.score.fullTime.away;
-    }
+    // Orientar a nuestro local/visitante
+    const home = ev.homeCode === homeCode ? ev.homeScore : ev.awayScore;
+    const away = ev.homeCode === homeCode ? ev.awayScore : ev.homeScore;
 
     if (home == null || away == null) {
       await db.update(matches).set({ lastSyncedAt: now }).where(eq(matches.id, matchId));
-      return NextResponse.json({ error: "La API aún no publica el marcador (puede tardar unos minutos)." }, { status: 409 });
+      return NextResponse.json({ error: "ESPN aún no publica el marcador." }, { status: 409 });
     }
 
     await db.update(matches).set({ homeScore: home, awayScore: away, lastSyncedAt: now }).where(eq(matches.id, matchId));

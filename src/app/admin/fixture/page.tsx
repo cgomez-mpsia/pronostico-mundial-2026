@@ -3,7 +3,6 @@ import { tournaments, matches, teams } from "@/db/schema";
 import { eq, or, asc } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { FixtureClient } from "./fixture-client";
-import { FixtureRealtime } from "@/app/dashboard/fixture-realtime";
 
 export default async function AdminFixturePage() {
   const tournament = await db.query.tournaments.findFirst({
@@ -74,15 +73,11 @@ export default async function AdminFixturePage() {
     .reverse();
 
   return (
-    <>
-      {/* Refresca en vivo cuando el sync actualiza el marcador (mismo patrón que jugadores) */}
-      <FixtureRealtime />
-      <FixtureClient
-        tournamentName={tournament.name}
-        upcomingMatches={toClient(upcoming)}
-        finishedMatches={toClient(finished)}
-        teams={allTeams}
-      />
-    </>
+    <FixtureClient
+      tournamentName={tournament.name}
+      upcomingMatches={toClient(upcoming)}
+      finishedMatches={toClient(finished)}
+      teams={allTeams}
+    />
   );
 }
