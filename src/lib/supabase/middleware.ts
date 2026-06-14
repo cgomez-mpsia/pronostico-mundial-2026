@@ -28,10 +28,13 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Redirigir a login si no está autenticado y accede a rutas protegidas
+  // Redirigir a login si no está autenticado y accede a rutas protegidas.
+  // Los endpoints de cron (/api/cron/*) se autentican por su cuenta con el header
+  // x-cron-secret, así que se excluyen del redirect basado en sesión de Supabase.
   const isProtected = !request.nextUrl.pathname.startsWith("/login") &&
     !request.nextUrl.pathname.startsWith("/_next") &&
-    !request.nextUrl.pathname.startsWith("/api/auth");
+    !request.nextUrl.pathname.startsWith("/api/auth") &&
+    !request.nextUrl.pathname.startsWith("/api/cron");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();

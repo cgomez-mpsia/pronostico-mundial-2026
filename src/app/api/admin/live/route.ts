@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { users, matches, participants, predictions, matchPoints } from "@/db/schema";
+import { users, matches, matchPoints } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { calculateMatchPoints } from "@/lib/points";
+import { applyMatchResult } from "@/lib/apply-result";
 
 const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish", "reopen"] as const;
 type LiveAction = (typeof LIVE_ACTIONS)[number];
@@ -40,9 +40,10 @@ export async function POST(request: NextRequest) {
     if (match.status !== "scheduled") {
       return NextResponse.json({ error: "Solo se puede iniciar partidos programados." }, { status: 400 });
     }
+    // source='manual': el organizador controla este partido → el sync no lo toca
     await db
       .update(matches)
-      .set({ status: "live", homeScore: 0, awayScore: 0 })
+      .set({ status: "live", homeScore: 0, awayScore: 0, resultSource: "manual" })
       .where(eq(matches.id, matchId));
     return NextResponse.json({ success: true });
   }
@@ -51,9 +52,10 @@ export async function POST(request: NextRequest) {
     if (match.status !== "finished") {
       return NextResponse.json({ error: "Solo se puede reabrir partidos finalizados." }, { status: 400 });
     }
+    // source='manual': al reabrir, el organizador toma el control → el sync no lo pisa
     await db.transaction(async (tx) => {
       await tx.delete(matchPoints).where(eq(matchPoints.matchId, matchId));
-      await tx.update(matches).set({ status: "live" }).where(eq(matches.id, matchId));
+      await tx.update(matches).set({ status: "live", resultSource: "manual" }).where(eq(matches.id, matchId));
     });
     return NextResponse.json({ success: true });
   }
@@ -90,66 +92,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "finish") {
-    const tournamentParticipants = await db.query.participants.findMany({
-      where: eq(participants.tournamentId, match.tournamentId),
-      columns: { id: true },
+    // El partido en vivo se decide a los 90 min (sin prórroga en este flujo manual).
+    const participantCount = await applyMatchResult({
+      matchId,
+      tournamentId: match.tournamentId,
+      homeScore: currentHome,
+      awayScore: currentAway,
+      source: "manual",
     });
 
-    const matchPredictions = await db
-      .select({
-        participantId: predictions.participantId,
-        homeScore: predictions.homeScore,
-        awayScore: predictions.awayScore,
-        isManuallyEntered: predictions.isManuallyEntered,
-        predictionId: predictions.id,
-      })
-      .from(predictions)
-      .where(eq(predictions.matchId, matchId));
-
-    const predByParticipant = new Map(matchPredictions.map((p) => [p.participantId, p]));
-    const result = { homeScore: currentHome, awayScore: currentAway };
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(matches)
-        .set({ status: "finished" })
-        .where(eq(matches.id, matchId));
-
-      for (const participant of tournamentParticipants) {
-        const pred = predByParticipant.get(participant.id) ?? null;
-        const points = calculateMatchPoints(
-          pred
-            ? {
-                homeScore: pred.homeScore,
-                awayScore: pred.awayScore,
-                isManuallyEntered: pred.isManuallyEntered,
-              }
-            : null,
-          result
-        );
-        await tx
-          .insert(matchPoints)
-          .values({
-            matchId,
-            participantId: participant.id,
-            predictionId: pred?.predictionId ?? null,
-            resultPoints: points.resultPoints,
-            exactPoints: points.exactPoints,
-            totalPoints: points.totalPoints,
-          })
-          .onConflictDoUpdate({
-            target: [matchPoints.participantId, matchPoints.matchId],
-            set: {
-              predictionId: pred?.predictionId ?? null,
-              resultPoints: points.resultPoints,
-              exactPoints: points.exactPoints,
-              totalPoints: points.totalPoints,
-            },
-          });
-      }
-    });
-
-    return NextResponse.json({ success: true, participantCount: tournamentParticipants.length });
+    return NextResponse.json({ success: true, participantCount });
   }
 
   return NextResponse.json({ error: "Acción desconocida." }, { status: 400 });

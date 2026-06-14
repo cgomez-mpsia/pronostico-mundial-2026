@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "db:seed": "tsx src/db/seed.ts",
     "db:seed-matches": "tsx src/db/seed-matches.ts",
-    "db:setup": "tsx src/db/setup.ts"
+    "db:setup": "tsx src/db/setup.ts",
+    "db:map-ids": "tsx src/db/map-external-ids.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

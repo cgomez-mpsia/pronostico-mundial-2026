@@ -52,6 +52,8 @@ export const teams = pgTable("teams", {
   code: text("code").notNull(),
   flagUrl: text("flag_url"),
   groupName: text("group_name"),
+  // id del equipo en football-data.org · null hasta correr el mapeo · sync automático
+  externalId: integer("external_id").unique(),
 });
 
 export const participants = pgTable(
@@ -99,11 +101,19 @@ export const matches = pgTable(
     extraTime: text("extra_time"),
     // equipo ganador cuando extraTime no es null · BR-023
     matchWinnerId: uuid("match_winner_id").references(() => teams.id),
+    // id del partido en football-data.org · null hasta correr el mapeo · sync automático
+    externalId: integer("external_id").unique(),
+    // null = sin resultado · 'auto' = escrito por el sync · 'manual' = el admin lo controla
+    // (el sync nunca pisa un resultado 'manual') · override del organizador
+    resultSource: text("result_source"),
+    // última vez que el sync tocó esta fila (auditoría)
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
   },
   (t) => [
     check("matches_status_check", sql`${t.status} IN ('scheduled', 'live', 'finished')`),
     check("matches_stage_check", sql`${t.stage} IN ('group', 'r32', 'r16', 'qf', 'sf', 'third', 'final')`),
     check("matches_extra_time_check", sql`${t.extraTime} IS NULL OR ${t.extraTime} IN ('aet', 'pen')`),
+    check("matches_result_source_check", sql`${t.resultSource} IS NULL OR ${t.resultSource} IN ('auto', 'manual')`),
   ]
 );
 

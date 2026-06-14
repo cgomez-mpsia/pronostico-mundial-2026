@@ -57,6 +57,13 @@
       "when": 1781380649673,
       "tag": "0007_add_abandoned_at",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781448117324,
+      "tag": "0008_massive_agent_brand",
+      "breakpoints": true
     }
   ]
 }
