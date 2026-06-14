@@ -54,6 +54,7 @@ export function LiveControls({
     if (data.awayScore !== undefined) setLocalAway(data.awayScore);
 
     if (action === "start") toast.success("Partido iniciado en vivo");
+    if (action === "refresh") toast.success(`Marcador actualizado · ${data.homeScore}-${data.awayScore}`);
     if (action === "finish") {
       toast.success(`Partido finalizado · ${data.participantCount} participantes calculados`);
     }
@@ -95,51 +96,19 @@ export function LiveControls({
         </div>
       </div>
 
-      {/* Goal buttons */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Button
-            type="button"
-            size="sm"
-            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
-            onClick={() => callAction("goal_home")}
-            disabled={!!loading}
-          >
-            {loading === "goal_home" ? "…" : "⚽ Gol Local"}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="w-full text-xs text-zinc-400 hover:text-zinc-600"
-            onClick={() => callAction("undo_home")}
-            disabled={!!loading || localHome === 0}
-          >
-            ← Deshacer
-          </Button>
-        </div>
-        <div className="space-y-1">
-          <Button
-            type="button"
-            size="sm"
-            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
-            onClick={() => callAction("goal_away")}
-            disabled={!!loading}
-          >
-            {loading === "goal_away" ? "…" : "⚽ Gol Visit."}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="w-full text-xs text-zinc-400 hover:text-zinc-600"
-            onClick={() => callAction("undo_away")}
-            disabled={!!loading || localAway === 0}
-          >
-            ← Deshacer
-          </Button>
-        </div>
-      </div>
+      {/* Actualizar desde la API (reemplaza el conteo manual de goles) */}
+      <Button
+        type="button"
+        size="sm"
+        className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+        onClick={() => callAction("refresh")}
+        disabled={!!loading}
+      >
+        {loading === "refresh" ? "Actualizando…" : "🔄 Actualizar marcador"}
+      </Button>
+      <p className="text-center text-[11px] text-zinc-400">
+        Baja el marcador en vivo de football-data.org. También se actualiza solo cada pocos minutos.
+      </p>
 
       {/* Finish */}
       <Button

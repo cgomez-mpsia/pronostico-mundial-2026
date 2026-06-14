@@ -4,8 +4,9 @@ import { db } from "@/db";
 import { users, matches, matchPoints } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { applyMatchResult } from "@/lib/apply-result";
+import { fetchWorldCupMatches, mapStatus, mapResult } from "@/lib/football-data";
 
-const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish", "reopen"] as const;
+const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish", "reopen", "refresh"] as const;
 type LiveAction = (typeof LIVE_ACTIONS)[number];
 
 export async function POST(request: NextRequest) {
@@ -32,9 +33,42 @@ export async function POST(request: NextRequest) {
 
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true },
+    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, externalId: true },
   });
   if (!match) return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
+
+  // Bajar el marcador actual desde football-data.org y escribirlo (sin finalizar
+  // ni calcular puntos — eso lo hace "Finalizar partido"). Reemplaza el conteo manual.
+  if (action === "refresh") {
+    if (!match.externalId) {
+      return NextResponse.json({ error: "Este partido no está vinculado a la API." }, { status: 400 });
+    }
+    const apiMatches = await fetchWorldCupMatches();
+    const api = apiMatches.find((m) => m.id === match.externalId);
+    if (!api) {
+      return NextResponse.json({ error: "No se encontró el partido en la API." }, { status: 404 });
+    }
+
+    let home: number | null = null;
+    let away: number | null = null;
+    if (mapStatus(api.status) === "finished") {
+      const r = mapResult(api);
+      if (r) {
+        home = r.homeScore;
+        away = r.awayScore;
+      }
+    } else if (api.score.fullTime.home != null && api.score.fullTime.away != null) {
+      home = api.score.fullTime.home;
+      away = api.score.fullTime.away;
+    }
+
+    if (home == null || away == null) {
+      return NextResponse.json({ error: "La API aún no publica el marcador (puede tardar unos minutos)." }, { status: 409 });
+    }
+
+    await db.update(matches).set({ homeScore: home, awayScore: away }).where(eq(matches.id, matchId));
+    return NextResponse.json({ success: true, homeScore: home, awayScore: away });
+  }
 
   if (action === "start") {
     if (match.status !== "scheduled") {
