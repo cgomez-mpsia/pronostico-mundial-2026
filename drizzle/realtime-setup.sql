@@ -24,3 +24,7 @@ begin
     alter publication supabase_realtime add table match_points;
   end if;
 end $$;
+
+-- REPLICA IDENTITY FULL en matches: hace que el payload de UPDATE incluya los
+-- valores ANTERIORES, necesario para que LiveToasts distinga gol / inicio / final.
+alter table matches replica identity full;

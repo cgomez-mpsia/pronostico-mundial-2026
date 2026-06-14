@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
 export function FixtureRealtime() {
@@ -16,8 +15,8 @@ export function FixtureRealtime() {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "matches" },
         () => {
+          // Refresca los datos de la página; los avisos los maneja LiveToasts (global).
           router.refresh();
-          toast.info("Resultados actualizados", { duration: 2500 });
         }
       )
       .subscribe();
