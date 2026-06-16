@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { OnlineDot } from "@/components/online-presence";
@@ -160,7 +161,9 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
                       championTeamName={s.championTeamName}
                     />
                     <span className="font-medium">
-                      {s.fullName}
+                      <Link href={`/profile/${s.userId}`} className="hover:underline">
+                        {s.fullName}
+                      </Link>
                       <OnlineDot userId={s.userId} className="ml-1.5 align-middle" />
                       {s.participantId === currentUserId && (
                         <span className="ml-2 text-xs text-zinc-400">(tú)</span>
