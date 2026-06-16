@@ -43,7 +43,13 @@ export default async function ReglasPage() {
           </li>
           <li>
             Si no ingresas un pronóstico antes del cierre, el sistema lo registra internamente como <strong>0-0</strong>.
-            Si el partido termina 0-0, obtienes 1 punto por acertar el resultado, pero nunca los +2 de score exacto.
+            Si el partido termina en empate, obtienes 1 punto por acertar el resultado, pero nunca los +2 de score exacto.
+          </li>
+          <li>
+            <strong>Importante:</strong> los partidos que <strong>no pronostiques</strong> solo pueden darte un{" "}
+            <strong>máximo de 2 puntos en todo el torneo</strong> (en total, sumando todos). Una vez alcanzado ese tope,
+            los demás partidos sin pronóstico valen <strong>0</strong>. Los puntos de partidos que sí pronosticas y los del
+            campeón no tienen ese límite.
           </li>
         </ul>
       </section>

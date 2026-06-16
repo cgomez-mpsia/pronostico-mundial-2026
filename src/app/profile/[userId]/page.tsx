@@ -2,9 +2,11 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, participants, tournaments, teams, matches, predictions, matchPoints } from "@/db/schema";
-import { eq, and, or, asc, desc, sql, lte, ne, isNull } from "drizzle-orm";
+import { eq, and, or, asc, desc, lte, ne, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { UserAvatar } from "@/components/user-avatar";
+import { UNPLACED_POINTS_CAP } from "@/lib/points";
+import { cappedTotalSql } from "@/lib/standings";
 import { ProfileTabs } from "./profile-tabs";
 
 export default async function ProfilePage({
@@ -82,7 +84,9 @@ export default async function ProfilePage({
     .leftJoin(awayTeam, eq(matches.awayTeamId, awayTeam.id))
     .leftJoin(predictions, eq(matchPoints.predictionId, predictions.id))
     .where(eq(matchPoints.participantId, participant.id))
-    .orderBy(asc(matches.scheduledAt));
+    // Mismo orden determinista que getCappedOutUnplacedKeys (BR-006): así el
+    // partido marcado "0 (tope)" aquí coincide con el del detalle/posiciones.
+    .orderBy(asc(matches.scheduledAt), asc(matchPoints.matchId));
 
   // Pronósticos de partidos ya cerrados (deadline pasado) pero aún SIN resultado
   // registrado. No tienen match_points todavía, así que no aparecen en `breakdown`.
@@ -112,38 +116,63 @@ export default async function ProfilePage({
     )
     .orderBy(asc(matches.scheduledAt));
 
-  // Stats calculadas en servidor
-  const totalMatches = breakdown.length;
-  const resultHits = breakdown.filter((r) => r.resultPoints > 0).length;
-  const exactHits = breakdown.filter((r) => r.exactPoints > 0).length;
-  const pctResult = totalMatches > 0 ? Math.round((resultHits / totalMatches) * 100) : null;
-  const pctExact = totalMatches > 0 ? Math.round((exactHits / totalMatches) * 100) : null;
+  // BR-006: tope acumulado de puntos por partidos sin pronóstico colocado.
+  // `breakdown` viene ordenado cronológico (asc). Marcamos `cappedOut` en los
+  // partidos no colocados cuyo punto ya no cuenta por haberse alcanzado el tope,
+  // para que el desglose y el total titular cuadren exactamente.
+  const breakdownCapped: Array<
+    (typeof breakdown)[number] & { cappedOut: boolean; effectivePoints: number }
+  > = [];
+  let unplacedCounted = 0;
+  for (const r of breakdown) {
+    const placed = r.isManuallyEntered === true;
+    let cappedOut = false;
+    if (!placed && r.totalPoints > 0) {
+      if (unplacedCounted + r.totalPoints <= UNPLACED_POINTS_CAP) {
+        unplacedCounted += r.totalPoints;
+      } else {
+        cappedOut = true;
+      }
+    }
+    breakdownCapped.push({ ...r, cappedOut, effectivePoints: cappedOut ? 0 : r.totalPoints });
+  }
 
-  // Racha: partidos más recientes consecutivos con puntos
-  const sortedDesc = [...breakdown].sort(
+  // Stats de exactitud: medidas SOLO sobre los partidos que el jugador realmente
+  // pronosticó (isManuallyEntered=true). Un 0-0 "de suerte" sin pronóstico no es
+  // un acierto real, así que ni cuenta como acierto ni infla el denominador.
+  const totalMatches = breakdown.length; // partidos finalizados (gate para mostrar stats)
+  const predictedMatches = breakdown.filter((r) => r.isManuallyEntered === true);
+  const predictedCount = predictedMatches.length;
+  const resultHits = predictedMatches.filter((r) => r.resultPoints > 0).length;
+  const exactHits = predictedMatches.filter((r) => r.exactPoints > 0).length;
+  const pctResult = predictedCount > 0 ? Math.round((resultHits / predictedCount) * 100) : null;
+  const pctExact = predictedCount > 0 ? Math.round((exactHits / predictedCount) * 100) : null;
+
+  // Racha: partidos más recientes consecutivos con puntos que cuentan
+  const sortedDesc = [...breakdownCapped].sort(
     (a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()
   );
   let streak = 0;
   for (const r of sortedDesc) {
-    if (r.totalPoints > 0) streak++;
+    if (r.effectivePoints > 0) streak++;
     else break;
   }
 
-  // Puntos totales propios
-  const myMatchPoints = breakdown.reduce((s, r) => s + r.totalPoints, 0);
+  // Puntos totales propios (con tope BR-006 aplicado)
+  const myMatchPoints = breakdownCapped.reduce((s, r) => s + r.effectivePoints, 0);
   const myTotalPoints = myMatchPoints + (participant.championPoints ?? 0);
 
   // Standings para rank y brecha con el líder
   const allTotals = await db
     .select({
       participantId: participants.id,
-      totalPoints: sql<number>`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`,
+      totalPoints: cappedTotalSql(),
     })
     .from(participants)
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
     .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
     .groupBy(participants.id, participants.championPoints)
-    .orderBy(desc(sql`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`));
+    .orderBy(desc(cappedTotalSql()));
 
   const leaderPoints = allTotals[0] ? Number(allTotals[0].totalPoints) : 0;
   const myRankEntry = allTotals.findIndex((r) => r.participantId === participant.id);
@@ -187,13 +216,16 @@ export default async function ProfilePage({
         championTeam={championTeam ?? null}
         pctResult={pctResult}
         pctExact={pctExact}
+        resultHits={resultHits}
+        exactHits={exactHits}
+        predictedCount={predictedCount}
         streak={streak}
         totalMatches={totalMatches}
         isOwnProfile={isOwnProfile}
         hasPaid={participant.hasPaid}
         gap={gap}
         isLeader={gap === 0}
-        breakdown={breakdown.map((r) => ({
+        breakdown={breakdownCapped.map((r) => ({
           matchId: r.matchId,
           homeTeamName: r.homeTeamName ?? "Por definir",
           awayTeamName: r.awayTeamName ?? "Por definir",
@@ -205,6 +237,7 @@ export default async function ProfilePage({
           resultPoints: r.resultPoints,
           exactPoints: r.exactPoints,
           totalPoints: r.totalPoints,
+          cappedOut: r.cappedOut,
         }))}
         championPoints={participant.championPoints}
         myTotalPoints={myTotalPoints}

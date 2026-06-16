@@ -140,7 +140,9 @@ export const matchPoints = pgTable(
   "match_points",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    // null si el participante no ingresó pronóstico
+    // FK al pronóstico SOLO si fue ingresado manualmente; null si no colocó (o
+    // no es manual). Invariante BR-006: prediction_id NULL ⟺ "no colocado", lo
+    // usan las agregaciones del tope. Lo garantiza applyMatchResult.
     predictionId: uuid("prediction_id").references(() => predictions.id),
     matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
     participantId: uuid("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),

@@ -1,8 +1,9 @@
 import { db } from "@/db";
 import { participants, users, tournaments, matchPoints } from "@/db/schema";
-import { eq, or, and, desc, sql, isNull } from "drizzle-orm";
+import { eq, or, and, desc, isNull } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { calculatePrizes } from "@/lib/prizes";
+import { cappedTotalSql } from "@/lib/standings";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AdminPrizesPage() {
@@ -22,16 +23,14 @@ export default async function AdminPrizesPage() {
       participantId: participants.id,
       fullName: users.fullName,
       hasPaid: participants.hasPaid,
-      totalPoints: sql<number>`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`,
+      totalPoints: cappedTotalSql(),
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
     .leftJoin(matchPoints, eq(matchPoints.participantId, participants.id))
     .where(and(eq(participants.tournamentId, tournament.id), isNull(participants.abandonedAt)))
     .groupBy(participants.id, users.fullName, participants.hasPaid, participants.championPoints)
-    .orderBy(
-      desc(sql`COALESCE(SUM(${matchPoints.totalPoints}), 0) + ${participants.championPoints}`)
-    );
+    .orderBy(desc(cappedTotalSql()));
 
   const paidCount = standings.filter((r) => r.hasPaid).length;
   const totalPool = paidCount * Number(tournament.inscriptionFee);

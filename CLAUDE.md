@@ -108,7 +108,15 @@ src/
 | Máximo por partido | 3 |
 | Campeón Mundial acertado | +5 (al final del torneo) |
 
-**Caso especial:** pronóstico no ingresado → evaluado como 0-0 internamente (`is_manually_entered = false`). Si el partido termina 0-0, el jugador gana solo 1 punto (empate), nunca los +2.
+**Caso especial:** pronóstico no ingresado → evaluado como 0-0 internamente (`is_manually_entered = false`). Si el partido termina en empate, el jugador gana 1 punto (acierta el empate), nunca los +2.
+
+**Tope de pronósticos no colocados (BR-006):** un participante solo puede acumular **un máximo de 2 puntos en todo el torneo** por partidos que no pronosticó (sin fila de predicción). Una vez alcanzado el tope, los siguientes partidos no colocados aportan **0**. Los puntos de partidos con pronóstico y los del campeón **no** tienen tope. El tope es acumulado por jugador e independiente del orden, por lo que **no se aplica por partido** sino al agregar el total (cada partido sigue guardando sus puntos crudos en `match_points`):
+- Cálculo por partido: `lib/points.ts` → `calculateMatchPoints` (sin cambios, da el punto crudo).
+- Tope al total: `lib/points.ts` → `applyUnplacedCap` / `UNPLACED_POINTS_CAP` (JS) y `lib/standings.ts` → `cappedTotalSql` (SQL). Usados por la tabla oficial, el reparto del pozo y el perfil.
+- En `match_points`, "no colocado" se identifica por `prediction_id IS NULL`. Invariante garantizado por `applyMatchResult`: enlaza `prediction_id` **solo** para pronósticos manuales (`is_manually_entered=true`), de modo que las agregaciones SQL del tope coinciden con `calculateMatchPoints` (que usa `isManuallyEntered`) aunque existieran pronósticos no manuales.
+- La vista **"Hoy"** muestra el incremento del día ya topado: a los no-colocados de hoy les resta lo que el jugador ya gastó del tope en días previos (`min(2, prior+hoy) − min(2, prior)`), de modo que los deltas diarios suman exactamente el total topado.
+- **Detalle por-partido** (partido, "Hoy", fixture, perfil): un empate no colocado topado se muestra como `0 (tope)`. `points.ts` → `selectCappedOutUnplacedKeys` (pura) y `standings.ts` → `getCappedOutUnplacedKeys` (consulta) atribuyen el tope a partidos puntuales con orden DETERMINISTA `(scheduledAt, matchId)`, compartido por todas las vistas para que coincidan partidos simultáneos.
+- La página pública **`/reglas`** documenta el tope para los participantes.
 
 ### Distribución del Pozo
 - **≤ 8 participantes:** 100% al 1er lugar.

@@ -3,9 +3,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { participants, tournaments, users, matches, predictions, matchPoints, teams } from "@/db/schema";
-import { eq, or, gte, lt, and, inArray, isNull, isNotNull } from "drizzle-orm";
+import { eq, or, gte, lt, and, inArray, isNull, isNotNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
+import { UNPLACED_POINTS_CAP } from "@/lib/points";
+import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
 
 const hoyPairKey = (a?: string | null, b?: string | null) => (a && b ? [a, b].sort().join("|") : "");
 
@@ -157,22 +159,74 @@ export default async function HoyPage() {
     rowsByMatch.set(row.matchId, list);
   }
 
-  // Resumen del día: puntos totales de hoy por participante
-  const dailyTotals = new Map<string, { fullName: string; avatarUrl: string | null; userId: string; points: number; exactCount: number }>();
+  // BR-006: puntos no colocados acumulados ANTES de hoy, por participante. Se
+  // necesitan para mostrar solo el incremento real de hoy una vez aplicado el
+  // tope acumulado (un no-colocado de hoy no cuenta si el jugador ya gastó el
+  // tope en días previos). "No colocado" = match_points.prediction_id NULL.
+  const priorUnplacedRows = await db
+    .select({
+      participantId: matchPoints.participantId,
+      unplaced: sql<number>`COALESCE(SUM(${matchPoints.totalPoints}), 0)`,
+    })
+    .from(matchPoints)
+    .innerJoin(matches, eq(matchPoints.matchId, matches.id))
+    .where(
+      and(
+        eq(matches.tournamentId, tournament.id),
+        isNull(matchPoints.predictionId),
+        lt(matches.scheduledAt, start)
+      )
+    )
+    .groupBy(matchPoints.participantId);
+  const priorUnplacedMap = new Map(
+    priorUnplacedRows.map((r) => [r.participantId, Number(r.unplaced)])
+  );
+
+  // BR-006: partidos no colocados topados, para mostrar 0 por-partido igual que
+  // en el perfil y las posiciones (orden determinista compartido).
+  const cappedOut = await getCappedOutUnplacedKeys(tournament.id);
+  const effPoints = (r: { participantId: string; matchId: string | null; totalPoints: number | null }) =>
+    r.totalPoints != null && r.matchId != null && cappedOut.has(cappedOutKey(r.participantId, r.matchId))
+      ? 0
+      : r.totalPoints;
+
+  // Resumen del día: puntos de hoy por participante, con el tope BR-006 aplicado.
+  // Separamos puntos de partidos CON pronóstico (sin tope) de los SIN pronóstico
+  // (topados), y para estos últimos contamos solo lo que crece el total topado.
+  const dailyTotals = new Map<
+    string,
+    { fullName: string; avatarUrl: string | null; userId: string; placed: number; unplaced: number; exactCount: number }
+  >();
   for (const row of allRows) {
     if (!row.totalPoints) continue;
     const entry = dailyTotals.get(row.participantId) ?? {
       fullName: row.fullName,
       avatarUrl: row.avatarUrl,
       userId: row.userId,
-      points: 0,
+      placed: 0,
+      unplaced: 0,
       exactCount: 0,
     };
-    entry.points += row.totalPoints ?? 0;
+    if (row.isManuallyEntered === true) entry.placed += row.totalPoints ?? 0;
+    else entry.unplaced += row.totalPoints ?? 0;
     if (row.exactPoints === 2) entry.exactCount++;
     dailyTotals.set(row.participantId, entry);
   }
-  const summary = Array.from(dailyTotals.values())
+  const summary = Array.from(dailyTotals.entries())
+    .map(([participantId, e]) => {
+      const prior = priorUnplacedMap.get(participantId) ?? 0;
+      // Incremento topado que aportan los no-colocados de hoy
+      const cappedDailyUnplaced =
+        Math.min(UNPLACED_POINTS_CAP, prior + e.unplaced) - Math.min(UNPLACED_POINTS_CAP, prior);
+      return {
+        fullName: e.fullName,
+        avatarUrl: e.avatarUrl,
+        userId: e.userId,
+        points: e.placed + cappedDailyUnplaced,
+        exactCount: e.exactCount,
+      };
+    })
+    .filter((s) => s.points > 0)
     .sort((a, b) => b.points - a.points || a.fullName.localeCompare(b.fullName));
 
   const hasFinished = todayMatches.some((m) => m.status === "finished");
@@ -266,7 +320,7 @@ export default async function HoyPage() {
           const extraTimeBadge = m.extraTime === "pen" ? "pen." : m.extraTime === "aet" ? "a.e.t." : null;
           const matchRows = rowsByMatch.get(m.matchId) ?? [];
           const sortedRows = isFinished
-            ? [...matchRows].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
+            ? [...matchRows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
             : matchRows;
 
           return (
@@ -357,17 +411,24 @@ export default async function HoyPage() {
                             </td>
                             {isFinished && (
                               <td className="py-1.5 text-right tabular-nums">
-                                {r.totalPoints != null ? (
-                                  <span className={
-                                    r.totalPoints === 3
-                                      ? "font-bold text-green-600 dark:text-green-400"
-                                      : r.totalPoints > 0
-                                        ? "font-medium text-blue-600 dark:text-blue-400"
-                                        : "text-zinc-400"
-                                  }>
-                                    {r.totalPoints > 0 ? `+${r.totalPoints}` : "0"}
-                                  </span>
-                                ) : (
+                                {r.totalPoints != null ? (() => {
+                                  const pts = effPoints(r) ?? 0;
+                                  const isCapped = pts === 0 && (r.totalPoints ?? 0) > 0;
+                                  return (
+                                    <span
+                                      className={
+                                        pts === 3
+                                          ? "font-bold text-green-600 dark:text-green-400"
+                                          : pts > 0
+                                            ? "font-medium text-blue-600 dark:text-blue-400"
+                                            : "text-zinc-400"
+                                      }
+                                      title={isCapped ? "No cuenta: tope de 2 pts por partidos sin pronóstico alcanzado" : undefined}
+                                    >
+                                      {pts > 0 ? `+${pts}` : isCapped ? "0 (tope)" : "0"}
+                                    </span>
+                                  );
+                                })() : (
                                   <span className="text-zinc-300 dark:text-zinc-600">—</span>
                                 )}
                               </td>

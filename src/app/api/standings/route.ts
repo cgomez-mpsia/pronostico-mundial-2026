@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { tournaments, participants, users, matchPoints, teams, matches, predictions } from "@/db/schema";
 import { eq, or, sql, and, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { calculateMatchPoints } from "@/lib/points";
+import { calculateMatchPoints, applyUnplacedCap } from "@/lib/points";
 
 export async function GET() {
   const supabase = await createClient();
@@ -41,10 +41,16 @@ export async function GET() {
       hasPaid: participants.hasPaid,
       championFlagUrl: championTeam.flagUrl,
       championTeamName: championTeam.name,
-      totalPoints: sql<number>`
-        COALESCE(SUM(CASE WHEN ${finishedMatch.status} = 'finished' THEN ${matchPoints.totalPoints} ELSE 0 END), 0)
-        + ${participants.championPoints}
-      `.as("total_points"),
+      championPoints: participants.championPoints,
+      // BR-006: separamos puntos de partidos finalizados CON y SIN pronóstico
+      // colocado, porque el tope acumulado se aplica solo a los segundos (y debe
+      // combinarse con los puntos en vivo antes de topar).
+      placedFinished: sql<number>`
+        COALESCE(SUM(CASE WHEN ${finishedMatch.status} = 'finished' AND ${matchPoints.predictionId} IS NOT NULL THEN ${matchPoints.totalPoints} ELSE 0 END), 0)
+      `.as("placed_finished"),
+      unplacedFinished: sql<number>`
+        COALESCE(SUM(CASE WHEN ${finishedMatch.status} = 'finished' AND ${matchPoints.predictionId} IS NULL THEN ${matchPoints.totalPoints} ELSE 0 END), 0)
+      `.as("unplaced_finished"),
     })
     .from(participants)
     .innerJoin(users, eq(participants.userId, users.id))
@@ -61,8 +67,7 @@ export async function GET() {
       participants.championPoints,
       championTeam.flagUrl,
       championTeam.name
-    )
-    .orderBy(sql`total_points DESC`, users.fullName);
+    );
 
   // Live hypothetical points for matches in progress
   const liveMatches = await db
@@ -70,7 +75,10 @@ export async function GET() {
     .from(matches)
     .where(and(eq(matches.tournamentId, tournament.id), eq(matches.status, "live")));
 
-  const livePointsMap = new Map<string, number>();
+  // BR-006: puntos en vivo separados en colocados/no colocados por participante,
+  // para combinarlos con lo finalizado ANTES de aplicar el tope acumulado.
+  const livePlacedMap = new Map<string, number>();
+  const liveUnplacedMap = new Map<string, number>();
 
   if (liveMatches.length > 0) {
     const liveMatchIds = liveMatches.map((m) => m.id);
@@ -92,46 +100,63 @@ export async function GET() {
     }
 
     for (const row of rows) {
-      let pts = 0;
+      let placed = 0;
+      let unplaced = 0;
       for (const lm of liveMatches) {
         if (lm.homeScore === null || lm.awayScore === null) continue;
         const pred = predMap.get(`${row.participantId}:${lm.id}`) ?? null;
-        pts += calculateMatchPoints(
+        const isPlaced = pred !== null && pred.isManuallyEntered;
+        const pts = calculateMatchPoints(
           pred
             ? { homeScore: pred.homeScore, awayScore: pred.awayScore, isManuallyEntered: pred.isManuallyEntered }
             : null,
           { homeScore: lm.homeScore, awayScore: lm.awayScore }
         ).totalPoints;
+        if (isPlaced) placed += pts;
+        else unplaced += pts;
       }
-      livePointsMap.set(row.participantId, pts);
+      livePlacedMap.set(row.participantId, placed);
+      liveUnplacedMap.set(row.participantId, unplaced);
     }
   }
 
-  const hasLive = liveMatches.length > 0;
+  // Build standings array. totalPoints = total oficial topado; livePoints = delta
+  // que aportan los partidos en vivo una vez aplicado el tope sobre el combinado.
+  const standings = rows.map((row) => {
+    const placedFinished = Number(row.placedFinished);
+    const unplacedFinished = Number(row.unplacedFinished);
+    const champion = row.championPoints ?? 0;
+    const placedLive = livePlacedMap.get(row.participantId) ?? 0;
+    const unplacedLive = liveUnplacedMap.get(row.participantId) ?? 0;
 
-  // Build standings array
-  const standings = rows.map((row) => ({
-    rank: 0,
-    participantId: row.participantId,
-    userId: row.userId,
-    fullName: row.fullName,
-    avatarUrl: row.avatarUrl ?? null,
-    championFlagUrl: row.championFlagUrl ?? null,
-    championTeamName: row.championTeamName ?? null,
-    hasPaid: row.hasPaid,
-    totalPoints: Number(row.totalPoints),
-    livePoints: livePointsMap.get(row.participantId) ?? 0,
-  }));
+    const officialTotal = applyUnplacedCap(placedFinished, unplacedFinished, champion);
+    const displayTotal = applyUnplacedCap(
+      placedFinished + placedLive,
+      unplacedFinished + unplacedLive,
+      champion
+    );
 
-  // Sort by combined total when live
-  if (hasLive) {
-    standings.sort((a, b) => {
-      const aDis = a.totalPoints + a.livePoints;
-      const bDis = b.totalPoints + b.livePoints;
-      if (bDis !== aDis) return bDis - aDis;
-      return a.fullName.localeCompare(b.fullName);
-    });
-  }
+    return {
+      rank: 0,
+      participantId: row.participantId,
+      userId: row.userId,
+      fullName: row.fullName,
+      avatarUrl: row.avatarUrl ?? null,
+      championFlagUrl: row.championFlagUrl ?? null,
+      championTeamName: row.championTeamName ?? null,
+      hasPaid: row.hasPaid,
+      totalPoints: officialTotal,
+      livePoints: displayTotal - officialTotal,
+    };
+  });
+
+  // Orden por total combinado (official + live); con desempate estable por nombre.
+  standings.sort((a, b) => {
+    const aDis = a.totalPoints + a.livePoints;
+    const bDis = b.totalPoints + b.livePoints;
+    if (bDis !== aDis) return bDis - aDis;
+    return a.fullName.localeCompare(b.fullName);
+  });
 
   // Assign ranks
   let rank = 1;

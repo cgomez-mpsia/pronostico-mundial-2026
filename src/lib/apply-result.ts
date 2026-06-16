@@ -99,12 +99,22 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
         result
       );
 
+      // BR-006: "no colocado" = no ingresó pronóstico manualmente. Enlazamos
+      // predictionId SOLO para pronósticos manuales, de modo que el invariante
+      // `prediction_id IS NULL ⟺ no colocado` quede garantizado por construcción.
+      // Así todas las agregaciones SQL del tope (que detectan no-colocado por
+      // prediction_id NULL) coinciden con calculateMatchPoints (que usa
+      // isManuallyEntered), incluso si alguna vez existiera una predicción no
+      // manual (hoy no se crean). Un pronóstico no manual no es elegible al +2
+      // y, como no colocado, queda sujeto al tope.
+      const placedPredictionId = pred?.isManuallyEntered ? pred.predictionId : null;
+
       await tx
         .insert(matchPoints)
         .values({
           matchId,
           participantId: participant.id,
-          predictionId: pred?.predictionId ?? null,
+          predictionId: placedPredictionId,
           resultPoints: points.resultPoints,
           exactPoints: points.exactPoints,
           totalPoints: points.totalPoints,
@@ -112,7 +122,7 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
         .onConflictDoUpdate({
           target: [matchPoints.participantId, matchPoints.matchId],
           set: {
-            predictionId: pred?.predictionId ?? null,
+            predictionId: placedPredictionId,
             resultPoints: points.resultPoints,
             exactPoints: points.exactPoints,
             totalPoints: points.totalPoints,

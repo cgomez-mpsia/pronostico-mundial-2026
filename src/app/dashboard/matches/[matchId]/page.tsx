@@ -7,6 +7,7 @@ import { alias } from "drizzle-orm/pg-core";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
 import { fetchEspnByCodes, type EspnMatch } from "@/lib/espn";
+import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -138,6 +139,15 @@ export default async function MatchDetailPage({
 
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
 
+  // BR-006: puntos efectivos por participante en ESTE partido. Un empate no
+  // colocado cuyo punto ya está topado en el total se muestra como 0, igual que
+  // en el perfil y las posiciones.
+  const cappedOut = await getCappedOutUnplacedKeys(matchRows.tournamentId);
+  const effPoints = (r: { participantId: string; totalPoints: number | null }) =>
+    r.totalPoints != null && cappedOut.has(cappedOutKey(r.participantId, matchId))
+      ? 0
+      : r.totalPoints;
+
   // Texto para compartir por chat (disponible solo tras el deadline)
   const homeTeamLabel = matchRows.homeTeamName ?? "Local";
   const awayTeamLabel = matchRows.awayTeamName ?? "Visitante";
@@ -153,12 +163,13 @@ export default async function MatchDetailPage({
   chatLines.push("");
   chatLines.push("Pronósticos:");
   const sortedRows = isFinished
-    ? [...rows].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
+    ? [...rows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
     : rows;
   for (const r of sortedRows) {
     const pred = r.isManuallyEntered ? `${r.predHomeScore}-${r.predAwayScore}` : "sin pronóstico";
     if (isFinished && r.totalPoints !== null) {
-      const pts = r.totalPoints === 1 ? "1 pt" : `${r.totalPoints} pts`;
+      const eff = effPoints(r) ?? 0;
+      const pts = eff === 1 ? "1 pt" : `${eff} pts`;
       chatLines.push(`${r.fullName} → ${pred} (${pts})`);
     } else {
       chatLines.push(`${r.fullName} → ${pred}`);
@@ -280,12 +291,14 @@ export default async function MatchDetailPage({
             <tbody className="divide-y">
               {rows
                 .sort((a, b) => {
-                  if (isFinished) return (b.totalPoints ?? 0) - (a.totalPoints ?? 0);
+                  if (isFinished) return (effPoints(b) ?? 0) - (effPoints(a) ?? 0);
                   return 0;
                 })
                 .map((r) => {
                   const isCurrentUser = r.userId === user.id;
                   const hasPred = r.isManuallyEntered;
+                  const pts = effPoints(r);
+                  const isCapped = r.totalPoints != null && pts === 0 && (r.totalPoints ?? 0) > 0;
                   return (
                     <tr
                       key={r.participantId}
@@ -310,14 +323,17 @@ export default async function MatchDetailPage({
                       {isFinished && (
                         <td className="py-2.5 text-right tabular-nums">
                           {r.totalPoints != null ? (
-                            <span className={
-                              r.totalPoints === 3
-                                ? "font-bold text-green-600 dark:text-green-400"
-                                : r.totalPoints > 0
-                                  ? "font-medium text-blue-600 dark:text-blue-400"
-                                  : "text-zinc-400"
-                            }>
-                              {r.totalPoints > 0 ? `+${r.totalPoints}` : "0"}
+                            <span
+                              className={
+                                pts === 3
+                                  ? "font-bold text-green-600 dark:text-green-400"
+                                  : (pts ?? 0) > 0
+                                    ? "font-medium text-blue-600 dark:text-blue-400"
+                                    : "text-zinc-400"
+                              }
+                              title={isCapped ? "No cuenta: tope de 2 pts por partidos sin pronóstico alcanzado" : undefined}
+                            >
+                              {(pts ?? 0) > 0 ? `+${pts}` : isCapped ? "0 (tope)" : "0"}
                             </span>
                           ) : (
                             <span className="text-zinc-300 dark:text-zinc-600">—</span>

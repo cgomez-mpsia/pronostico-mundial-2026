@@ -15,6 +15,8 @@ interface BreakdownRow {
   resultPoints: number;
   exactPoints: number;
   totalPoints: number;
+  // BR-006: true si el punto de este partido no colocado no cuenta (tope alcanzado)
+  cappedOut?: boolean;
 }
 
 interface PendingRow {
@@ -30,6 +32,9 @@ interface ProfileTabsProps {
   championTeam: { name: string; flagUrl: string | null } | null;
   pctResult: number | null;
   pctExact: number | null;
+  resultHits: number;
+  exactHits: number;
+  predictedCount: number;
   streak: number;
   totalMatches: number;
   isOwnProfile: boolean;
@@ -48,6 +53,9 @@ export function ProfileTabs({
   championTeam,
   pctResult,
   pctExact,
+  resultHits,
+  exactHits,
+  predictedCount,
   streak,
   totalMatches,
   isOwnProfile,
@@ -97,8 +105,16 @@ export function ProfileTabs({
           {/* Estadísticas */}
           {totalMatches > 0 ? (
             <div className="grid grid-cols-3 gap-4">
-              <Stat label="% Resultados" value={pctResult !== null ? `${pctResult}%` : "—"} />
-              <Stat label="% Exactos" value={pctExact !== null ? `${pctExact}%` : "—"} />
+              <Stat
+                label="% Resultados"
+                value={pctResult !== null ? `${pctResult}%` : "—"}
+                sublabel={predictedCount > 0 ? `${resultHits}/${predictedCount} pronosticados` : "sin pronósticos"}
+              />
+              <Stat
+                label="% Exactos"
+                value={pctExact !== null ? `${pctExact}%` : "—"}
+                sublabel={predictedCount > 0 ? `${exactHits}/${predictedCount} pronosticados` : "sin pronósticos"}
+              />
               <Stat label="Racha actual" value={streak > 0 ? `${streak}` : "0"} sublabel="partidos" />
             </div>
           ) : (
@@ -193,7 +209,16 @@ export function ProfileTabs({
                             : "No pronosticó"}
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <PointsBadge result={r.resultPoints} exact={r.exactPoints} />
+                          {r.cappedOut ? (
+                            <span
+                              className="text-zinc-400"
+                              title="No cuenta: alcanzaste el tope de 2 pts por partidos sin pronóstico"
+                            >
+                              0 <span className="text-[10px]">(tope)</span>
+                            </span>
+                          ) : (
+                            <PointsBadge result={r.resultPoints} exact={r.exactPoints} />
+                          )}
                         </td>
                       </tr>
                     ))}

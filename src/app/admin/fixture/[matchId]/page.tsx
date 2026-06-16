@@ -6,6 +6,7 @@ import { eq, and, or, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { PredictionRow } from "./prediction-row";
 import { CopyButton } from "@/components/copy-button";
+import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -112,6 +113,13 @@ export default async function AdminMatchDetailPage({
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
   const isFinished = matchRows.status === "finished";
 
+  // BR-006: puntos efectivos (un no colocado topado cuenta como 0).
+  const cappedOut = await getCappedOutUnplacedKeys(matchRows.tournamentId);
+  const effPoints = (r: { participantId: string; totalPoints: number | null }) =>
+    r.totalPoints != null && cappedOut.has(cappedOutKey(r.participantId, matchId))
+      ? 0
+      : r.totalPoints;
+
   // Texto para compartir por chat
   const home = matchRows.homeTeamName ?? "Local";
   const away = matchRows.awayTeamName ?? "Visitante";
@@ -130,12 +138,13 @@ export default async function AdminMatchDetailPage({
   } else {
     summaryLines.push("Pronósticos:");
     const sorted = isFinished
-      ? [...rows].sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
+      ? [...rows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
       : rows;
     for (const r of sorted) {
       const pred = r.isManuallyEntered ? `${r.predHome}-${r.predAway}` : "sin pronóstico";
       if (isFinished && r.totalPoints !== null) {
-        const pts = r.totalPoints === 1 ? "1 pt" : `${r.totalPoints} pts`;
+        const eff = effPoints(r) ?? 0;
+        const pts = eff === 1 ? "1 pt" : `${eff} pts`;
         summaryLines.push(`${r.fullName} → ${pred} (${pts})`);
       } else {
         summaryLines.push(`${r.fullName} → ${pred}`);
