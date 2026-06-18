@@ -26,7 +26,9 @@ export type GroupRow = {
   gc: number;
   dg: string;
   pts: number;
-  live: string | null; // "1-1" si el equipo está jugando ahora
+  // Marcador del partido en curso, desde la perspectiva de este equipo ("2-0"),
+  // con el resultado parcial para colorear el badge. null si no juega ahora.
+  live: { score: string; outcome: "win" | "loss" | "draw" } | null;
 };
 
 export type GroupTable = { group: string; rows: GroupRow[]; hasLive: boolean };
@@ -35,6 +37,11 @@ export type GroupTable = { group: string; rows: GroupRow[]; hasLive: boolean };
 type Raw = Omit<GroupRow, "dg" | "live"> & { dgNum: number };
 
 type LiveMatch = { homeCode: string; awayCode: string; homeScore: number; awayScore: number };
+
+type LiveBadge = { score: string; outcome: "win" | "loss" | "draw" };
+
+const outcome = (gf: number, against: number): LiveBadge["outcome"] =>
+  gf > against ? "win" : gf < against ? "loss" : "draw";
 
 const fmtDg = (n: number) => (n > 0 ? `+${n}` : String(n));
 
@@ -87,7 +94,7 @@ function overlayLive(rows: Raw[], live: LiveMatch[]): boolean {
   return any;
 }
 
-function toRows(raw: Raw[], hasLive: boolean, badge: Map<string, string>): GroupRow[] {
+function toRows(raw: Raw[], hasLive: boolean, badge: Map<string, LiveBadge>): GroupRow[] {
   const rows = raw.map((r) => ({
     code: r.code,
     name: r.name,
@@ -124,9 +131,10 @@ export async function GET() {
     .where(isNotNull(teams.groupName));
   const byCode = new Map(groupTeams.map((t) => [t.code, t]));
 
-  // Partidos en vivo (para proyectar puntos) + badge de marcador por equipo
+  // Partidos en vivo (para proyectar puntos) + badge de marcador por equipo,
+  // desde la perspectiva de cada equipo (Canadá "2-0" verde, Catar "0-2" rojo).
   const live: LiveMatch[] = [];
-  const badge = new Map<string, string>();
+  const badge = new Map<string, LiveBadge>();
   try {
     const espnMatches = await fetchEspnMatches(espnDateWindow(new Date()));
     for (const m of espnMatches) {
@@ -134,9 +142,8 @@ export async function GET() {
       const hs = m.homeScore ?? 0;
       const as = m.awayScore ?? 0;
       live.push({ homeCode: m.homeCode, awayCode: m.awayCode, homeScore: hs, awayScore: as });
-      const score = `${hs}-${as}`;
-      badge.set(m.homeCode, score);
-      badge.set(m.awayCode, score);
+      badge.set(m.homeCode, { score: `${hs}-${as}`, outcome: outcome(hs, as) });
+      badge.set(m.awayCode, { score: `${as}-${hs}`, outcome: outcome(as, hs) });
     }
   } catch {
     // sin datos en vivo, las tablas oficiales igual se muestran

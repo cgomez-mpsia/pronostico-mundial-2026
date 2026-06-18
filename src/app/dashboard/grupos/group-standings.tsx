@@ -96,13 +96,7 @@ export function GroupStandings() {
                 {rows.map((s, idx) => (
                   <tr
                     key={s.code}
-                    className={
-                      s.live !== null
-                        ? "bg-red-50/60 dark:bg-red-900/10"
-                        : idx < 2 && s.pj > 0
-                          ? "bg-emerald-50/50 dark:bg-emerald-900/10"
-                          : ""
-                    }
+                    className={idx < 2 && s.pj > 0 ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}
                   >
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-1.5">
@@ -110,8 +104,16 @@ export function GroupStandings() {
                         {s.flagUrl && <img src={s.flagUrl} alt="" className="h-3.5 w-5 shrink-0 rounded-sm object-cover" />}
                         <span className="truncate font-medium">{s.name}</span>
                         {s.live !== null && (
-                          <span className="ml-1 shrink-0 rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-red-500">
-                            {s.live}
+                          <span
+                            className={`ml-1 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                              s.live.outcome === "win"
+                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                : s.live.outcome === "loss"
+                                  ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                                  : "bg-zinc-500/15 text-zinc-500 dark:text-zinc-400"
+                            }`}
+                          >
+                            {s.live.score}
                           </span>
                         )}
                       </div>
