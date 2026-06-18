@@ -6,6 +6,7 @@ import { participants, tournaments, teams, matches, predictions } from "@/db/sch
 import { eq, or, asc, and } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { PredictionCard } from "./prediction-card";
+import { LiveMatchHero } from "./live-match-hero";
 import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
 
 const pairKey = (a?: string | null, b?: string | null) => (a && b ? [a, b].sort().join("|") : "");
@@ -151,8 +152,13 @@ export default async function DashboardPage() {
   // Un partido finalizado se queda en la sección principal ~1 hora después de que termina.
   // Como no hay finishedAt, usamos scheduledAt + 3h (90 min partido + 30 min buffer + 1h gracia).
   const FINISHED_GRACE_MS = 3 * 60 * 60 * 1000;
+  // Los partidos en vivo se promueven a un hero a todo el ancho arriba del
+  // fixture; se excluyen del grid normal para no duplicarlos.
+  const liveRows = matchRows.filter((m) => m.status === "live");
   const upcomingRows = matchRows.filter(
-    (m) => m.status !== "finished" || now.getTime() < m.scheduledAt.getTime() + FINISHED_GRACE_MS
+    (m) =>
+      m.status !== "live" &&
+      (m.status !== "finished" || now.getTime() < m.scheduledAt.getTime() + FINISHED_GRACE_MS)
   );
   const finishedRows = matchRows
     .filter((m) => m.status === "finished" && now.getTime() >= m.scheduledAt.getTime() + FINISHED_GRACE_MS)
@@ -255,6 +261,33 @@ export default async function DashboardPage() {
         <p className="text-sm text-zinc-400">
           El fixture aún no está cargado. El admin lo publicará próximamente.
         </p>
+      )}
+
+      {/* Partido(s) en vivo — hero a todo el ancho, apilados si hay más de uno */}
+      {liveRows.length > 0 && (
+        <section className="space-y-4">
+          {liveRows.map((m) => {
+            const pred = predMap.get(m.matchId);
+            return (
+              <LiveMatchHero
+                key={m.matchId}
+                matchId={m.matchId}
+                homeTeamName={m.homeTeamName ?? "Por definir"}
+                homeTeamCode={m.homeTeamCode ?? "TBD"}
+                homeTeamFlagUrl={m.homeTeamFlagUrl ?? null}
+                awayTeamName={m.awayTeamName ?? "Por definir"}
+                awayTeamCode={m.awayTeamCode ?? "TBD"}
+                awayTeamFlagUrl={m.awayTeamFlagUrl ?? null}
+                stageLabel={STAGE_LABELS[m.stage] ?? m.stage}
+                groupLabel={m.homeTeamGroupName ? `Grupo ${m.homeTeamGroupName}` : null}
+                initialHomeScore={m.homeScore}
+                initialAwayScore={m.awayScore}
+                initialClock={liveMinuteByPair.get(pairKey(m.homeTeamCode, m.awayTeamCode)) ?? null}
+                prediction={pred ? { homeScore: pred.homeScore, awayScore: pred.awayScore } : null}
+              />
+            );
+          })}
+        </section>
       )}
 
       {upcomingRows.length > 0 && renderStageGroups(upcomingRows)}

@@ -6,8 +6,9 @@ import { eq, and, or, isNull, isNotNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
-import { fetchEspnByCodes, type EspnMatch } from "@/lib/espn";
+import { fetchEspnByCodes, fetchEspnSummary, type EspnMatch, type LiveEvent } from "@/lib/espn";
 import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
+import { MatchTimeline } from "./match-timeline";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -83,13 +84,21 @@ export default async function MatchDetailPage({
   // Datos en vivo de ESPN (minuto + goleadores/tarjetas) para partidos en
   // juego o finalizados; resiliente: si ESPN falla, la página igual funciona.
   let espn: EspnMatch | null = null;
+  let liveEvents: LiveEvent[] = [];
   if ((isLive || isFinished) && matchRows.homeTeamCode && matchRows.awayTeamCode) {
     try {
       espn = await fetchEspnByCodes(matchRows.homeTeamCode, matchRows.awayTeamCode, matchRows.scheduledAt);
+      // Eventos atribuidos a cada equipo (summary), para la línea de tiempo a dos lados.
+      if (espn) {
+        const summary = await fetchEspnSummary(espn.espnId);
+        if (summary) liveEvents = summary.events;
+      }
     } catch {
       espn = null;
     }
   }
+  // Fallback: si el summary no trajo eventos, usamos las jugadas del scoreboard
+  // (sin atribución de equipo) para no perder la información.
   const timeline = (espn?.plays ?? []).filter((p) => p.isGoal || p.isCard);
 
   const displayHomeScore = matchRows.extraTime && matchRows.homeScoreFull !== null
@@ -244,24 +253,34 @@ export default async function MatchDetailPage({
         )}
       </div>
 
-      {/* Goleadores y tarjetas (ESPN) */}
-      {timeline.length > 0 && (
-        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800">
-          <div className="border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Incidencias</h2>
+      {/* Incidencias (ESPN) — línea de tiempo a dos lados, atribuida por equipo */}
+      {liveEvents.length > 0 ? (
+        <MatchTimeline
+          events={liveEvents}
+          homeCode={matchRows.homeTeamCode ?? "LOC"}
+          awayCode={matchRows.awayTeamCode ?? "VIS"}
+          homeFlagUrl={matchRows.homeTeamFlagUrl ?? null}
+          awayFlagUrl={matchRows.awayTeamFlagUrl ?? null}
+        />
+      ) : (
+        timeline.length > 0 && (
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800">
+            <div className="border-b border-zinc-200 px-4 py-2 dark:border-zinc-800">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Incidencias</h2>
+            </div>
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {timeline.map((p, i) => (
+                <li key={i} className="flex items-center gap-2.5 px-4 py-2 text-sm">
+                  <span className="w-10 shrink-0 text-right tabular-nums text-zinc-400">{p.minute}</span>
+                  <span className="shrink-0">
+                    {p.isGoal ? "⚽" : p.type.toLowerCase().includes("red") ? "🟥" : "🟨"}
+                  </span>
+                  <span className="truncate">{p.player || p.type}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {timeline.map((p, i) => (
-              <li key={i} className="flex items-center gap-2.5 px-4 py-2 text-sm">
-                <span className="w-10 shrink-0 text-right tabular-nums text-zinc-400">{p.minute}</span>
-                <span className="shrink-0">
-                  {p.isGoal ? "⚽" : p.type.toLowerCase().includes("red") ? "🟥" : "🟨"}
-                </span>
-                <span className="truncate">{p.player || p.type}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        )
       )}
 
       {/* Pre-deadline: solo contador */}
