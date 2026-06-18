@@ -60,7 +60,7 @@ export function GroupStandings() {
       {data?.hasLive && (
         <p className="flex items-center gap-1.5 text-xs font-medium text-red-500">
           <span className="animate-pulse">●</span>
-          En vivo — las tablas se actualizan automáticamente
+          En vivo — puntos y posiciones provisionales, incluyen los partidos en curso
         </p>
       )}
 
@@ -123,7 +123,7 @@ export function GroupStandings() {
                     <td className="px-1 py-2 text-center tabular-nums text-zinc-500">{s.gf}</td>
                     <td className="px-1 py-2 text-center tabular-nums text-zinc-500">{s.gc}</td>
                     <td className="px-1 py-2 text-center tabular-nums text-zinc-500">{s.dg}</td>
-                    <td className="px-2 py-2 text-center font-bold tabular-nums">{s.pts}</td>
+                    <td className={`px-2 py-2 text-center font-bold tabular-nums ${s.live !== null ? "text-red-500" : ""}`}>{s.pts}</td>
                   </tr>
                 ))}
               </tbody>
