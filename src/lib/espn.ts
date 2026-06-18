@@ -213,6 +213,9 @@ export type LiveEvent = {
   type: LiveEventType;
   side: "home" | "away";
   player: string;
+  // Solo en cambios: ESPN lista al que entra primero ("X replaces Y").
+  playerIn?: string;
+  playerOut?: string;
 };
 
 export type LiveStatPair = { home: number; away: number };
@@ -297,12 +300,15 @@ export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | nu
     const side = k.team?.id ? sideById.get(k.team.id) : undefined;
     if (!side) continue;
     const display = k.clock?.displayValue ?? "";
+    const names = (k.participants ?? []).map((p) => p.athlete?.displayName ?? "").filter(Boolean);
     events.push({
       minute: display,
       minuteValue: parseMinute(display) ?? 0,
       type,
       side,
-      player: (k.participants ?? []).map((p) => p.athlete?.displayName ?? "").filter(Boolean).join(" → "),
+      // En un cambio, ESPN ordena [entra, sale]; para el resto, el jugador del evento.
+      player: type === "sub" ? (names[0] ?? "") : names.join(" → "),
+      ...(type === "sub" ? { playerIn: names[0], playerOut: names[1] } : {}),
     });
   }
   events.sort((a, b) => a.minuteValue - b.minuteValue);
