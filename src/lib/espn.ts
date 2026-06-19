@@ -130,13 +130,14 @@ export async function fetchEspnMatches(dates: string[]): Promise<EspnMatch[]> {
   return out;
 }
 
-/** Trae el partido de ESPN que coincide con el par de códigos, en la fecha dada. */
+/** Trae el partido de ESPN que coincide con el par de códigos, en la fecha dada.
+ *  Usa una ventana (±1 día) por si el partido cae en otra fecha UTC. */
 export async function fetchEspnByCodes(
   homeCode: string,
   awayCode: string,
   date: Date
 ): Promise<EspnMatch | null> {
-  const ms = await fetchEspnMatches([espnDate(date)]);
+  const ms = await fetchEspnMatches(espnDateWindow(date));
   return (
     ms.find(
       (e) =>

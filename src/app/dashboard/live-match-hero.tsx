@@ -44,14 +44,25 @@ export function LiveMatchHero({
   prediction,
 }: Props) {
   const [summary, setSummary] = useState<LiveSummary | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasLoadedRef = useRef(false); // ¿alguna vez llegó el resumen?
+  const failuresRef = useRef(0); // fallos consecutivos antes del primer éxito
 
   const refresh = useCallback(async () => {
+    // Marca un intento fallido; tras 2 sin haber cargado nunca → "no disponible".
+    const registerFailure = () => {
+      failuresRef.current += 1;
+      if (!hasLoadedRef.current && failuresRef.current >= 2) setUnavailable(true);
+    };
     try {
       const res = await fetch(`/api/live-summary?matchId=${matchId}`, { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) return registerFailure();
       const data = (await res.json()) as { summary: LiveSummary | null };
-      if (!data.summary) return;
+      if (!data.summary) return registerFailure();
+      hasLoadedRef.current = true;
+      failuresRef.current = 0;
+      setUnavailable(false);
       setSummary(data.summary);
       // El partido terminó: dejamos de sondear (la página no se re-renderiza sola).
       if (data.summary.status === "finished" && intervalRef.current) {
@@ -59,7 +70,7 @@ export function LiveMatchHero({
         intervalRef.current = null;
       }
     } catch {
-      /* mantenemos el último estado conocido */
+      registerFailure(); // mantenemos el último estado conocido si ya había
     }
   }, [matchId]);
 
@@ -153,6 +164,11 @@ export function LiveMatchHero({
             homeFlagUrl={homeTeamFlagUrl}
             awayFlagUrl={awayTeamFlagUrl}
           />
+        ) : unavailable ? (
+          <div className="flex h-32 flex-col items-center justify-center gap-0.5 rounded-lg bg-zinc-50 text-xs text-zinc-400 dark:bg-zinc-800/40">
+            <span className="font-medium text-zinc-500">Dinámica no disponible</span>
+            <span>No pudimos cargar los datos en vivo de este partido.</span>
+          </div>
         ) : (
           <div className="flex h-32 items-center justify-center rounded-lg bg-zinc-50 text-xs text-zinc-400 dark:bg-zinc-800/40">
             Cargando dinámica del partido…
