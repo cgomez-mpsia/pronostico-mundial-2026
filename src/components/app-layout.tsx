@@ -1,6 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { PushNotifications } from "@/components/push-notifications";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { PresenceProvider, OnlineCount } from "@/components/online-presence";
 import { LiveUpdates } from "@/components/live-updates";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -36,6 +37,7 @@ export function AppLayout({ fullName, avatarUrl, isAdmin, userId, championFlagUr
               <AppBreadcrumb />
             </div>
             <OnlineCount />
+            <ThemeToggle />
             <PushNotifications isAdmin={isAdmin} />
           </header>
           <main className="flex-1">{children}</main>
