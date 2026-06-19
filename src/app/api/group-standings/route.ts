@@ -26,6 +26,9 @@ export type GroupRow = {
   gc: number;
   dg: string;
   pts: number;
+  // true si este equipo es 3ro de su grupo y entra entre los 8 mejores terceros
+  // (formato Mundial 2026: 2 directos por grupo + 8 mejores 3ros → 32 a dieciseisavos).
+  bestThird: boolean;
   // Marcador del partido en curso, desde la perspectiva de este equipo ("2-0"),
   // con el resultado parcial para colorear el badge. null si no juega ahora.
   live: { score: string; outcome: "win" | "loss" | "draw" } | null;
@@ -34,7 +37,7 @@ export type GroupRow = {
 export type GroupTable = { group: string; rows: GroupRow[]; hasLive: boolean };
 
 // Fila interna mutable, con diferencia de gol numérica para ordenar.
-type Raw = Omit<GroupRow, "dg" | "live"> & { dgNum: number };
+type Raw = Omit<GroupRow, "dg" | "live" | "bestThird"> & { dgNum: number };
 
 type LiveMatch = { homeCode: string; awayCode: string; homeScore: number; awayScore: number };
 
@@ -102,6 +105,7 @@ function toRows(raw: Raw[], hasLive: boolean, badge: Map<string, LiveBadge>): Gr
     pj: r.pj, g: r.g, e: r.e, p: r.p, gf: r.gf, gc: r.gc,
     dg: fmtDg(r.dgNum),
     pts: r.pts,
+    bestThird: false, // se calcula globalmente tras armar los 12 grupos
     live: badge.get(r.code) ?? null,
     _dgNum: r.dgNum,
   }));
@@ -198,6 +202,23 @@ export async function GET() {
   }
 
   groups.sort((a, b) => a.group.localeCompare(b.group));
+
+  // Mejores terceros (formato Mundial 2026): de los 12 terceros de grupo, los 8
+  // mejores avanzan. Criterio FIFA: puntos → diferencia de gol → goles a favor
+  // (luego fair-play y sorteo, que no modelamos). Provisional mientras hay
+  // partidos por jugar, igual que el resaltado de 1º/2º. Solo cuentan terceros
+  // que ya jugaron (pj > 0); si hay menos de 8, se marcan los disponibles.
+  const thirds = groups
+    .map((g) => g.rows[2])
+    .filter((r): r is GroupRow => !!r && r.pj > 0);
+  thirds.sort(
+    (a, b) =>
+      b.pts - a.pts ||
+      (b.gf - b.gc) - (a.gf - a.gc) ||
+      b.gf - a.gf ||
+      a.name.localeCompare(b.name, "es")
+  );
+  for (const r of thirds.slice(0, 8)) r.bestThird = true;
 
   return NextResponse.json({ groups, hasLive: groups.some((g) => g.hasLive) } satisfies { groups: GroupTable[]; hasLive: boolean });
 }

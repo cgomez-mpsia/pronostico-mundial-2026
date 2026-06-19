@@ -64,6 +64,16 @@ export function GroupStandings() {
         </p>
       )}
 
+      {/* Leyenda de clasificación (formato Mundial 2026) */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-success/30" /> Clasifican (1º y 2º)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-info/30" /> Mejores 8 terceros
+        </span>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {groups.map(({ group, rows, hasLive }) => (
           <div
@@ -96,7 +106,13 @@ export function GroupStandings() {
                 {rows.map((s, idx) => (
                   <tr
                     key={s.code}
-                    className={idx < 2 && s.pj > 0 ? "bg-success/10" : ""}
+                    className={
+                      idx < 2 && s.pj > 0
+                        ? "bg-success/10"
+                        : s.bestThird
+                          ? "bg-info/10"
+                          : ""
+                    }
                   >
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-1.5">
