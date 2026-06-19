@@ -78,17 +78,33 @@ function toScore(s: string | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Trae los partidos del Mundial para las fechas dadas (dedupe por id). */
+/** GET a ESPN con timeout (aborta fetches colgados) y User-Agent. null si falla. */
+async function espnFetch(url: string, timeoutMs = 4500): Promise<Response | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch {
+    return null; // timeout o error de red
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Trae los partidos del Mundial para las fechas dadas (dedupe por id).
+ *  Las fechas se piden en paralelo para minimizar la latencia. */
 export async function fetchEspnMatches(dates: string[]): Promise<EspnMatch[]> {
   const out: EspnMatch[] = [];
   const seen = new Set<string>();
 
-  for (const dt of dates) {
-    const res = await fetch(`${SCOREBOARD}?dates=${dt}`, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
-    });
-    if (!res.ok) continue;
+  const responses = await Promise.all(dates.map((dt) => espnFetch(`${SCOREBOARD}?dates=${dt}`)));
+
+  for (const res of responses) {
+    if (!res || !res.ok) continue;
     const data = (await res.json()) as { events?: EspnEvent[] };
 
     for (const e of data.events ?? []) {
@@ -166,8 +182,8 @@ type EspnStat = { name?: string; value?: number; displayValue?: string };
 
 /** Tablas oficiales de los 12 grupos, con el orden/tiebreakers de ESPN. */
 export async function fetchGroupStandings(): Promise<{ group: string; entries: EspnStanding[] }[]> {
-  const res = await fetch(STANDINGS, { headers: { "User-Agent": "Mozilla/5.0" }, cache: "no-store" });
-  if (!res.ok) return [];
+  const res = await espnFetch(STANDINGS);
+  if (!res || !res.ok) return [];
   const data = (await res.json()) as {
     children?: { name?: string; standings?: { entries?: { team?: { abbreviation?: string }; stats?: EspnStat[] }[] } }[];
   };
@@ -273,11 +289,8 @@ function keyEventType(type: string | undefined): LiveEventType {
 
 /** Resumen en vivo de un partido por su id de ESPN (eventos, stats, momentum). */
 export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | null> {
-  const res = await fetch(`${SUMMARY}?event=${espnId}`, {
-    headers: { "User-Agent": "Mozilla/5.0" },
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
+  const res = await espnFetch(`${SUMMARY}?event=${espnId}`);
+  if (!res || !res.ok) return null;
   const data = (await res.json()) as SummaryResponse;
 
   const competitors = data.header?.competitions?.[0]?.competitors ?? [];
