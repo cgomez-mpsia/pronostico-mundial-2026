@@ -58,7 +58,7 @@ export function GroupStandings() {
   return (
     <>
       {data?.hasLive && (
-        <p className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-live">
           <span className="animate-pulse">●</span>
           En vivo — puntos y posiciones provisionales, incluyen los partidos en curso
         </p>
@@ -68,12 +68,12 @@ export function GroupStandings() {
         {groups.map(({ group, rows, hasLive }) => (
           <div
             key={group}
-            className={`rounded-xl border ${hasLive ? "border-red-300 dark:border-red-900/60" : "border-zinc-200 dark:border-zinc-800"}`}
+            className={`rounded-xl border ${hasLive ? "border-live/25" : "border-zinc-200 dark:border-zinc-800"}`}
           >
             <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-2.5 dark:border-zinc-800">
               <h2 className="text-sm font-semibold">Grupo {group}</h2>
               {hasLive && (
-                <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-red-500">
+                <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-live">
                   <span className="animate-pulse">●</span> En vivo
                 </span>
               )}
@@ -96,7 +96,7 @@ export function GroupStandings() {
                 {rows.map((s, idx) => (
                   <tr
                     key={s.code}
-                    className={idx < 2 && s.pj > 0 ? "bg-emerald-50/50 dark:bg-emerald-900/10" : ""}
+                    className={idx < 2 && s.pj > 0 ? "bg-success/10" : ""}
                   >
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-1.5">
@@ -107,9 +107,9 @@ export function GroupStandings() {
                           <span
                             className={`ml-1 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
                               s.live.outcome === "win"
-                                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                ? "bg-success/15 text-success"
                                 : s.live.outcome === "loss"
-                                  ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                                  ? "bg-live/15 text-live"
                                   : "bg-zinc-500/15 text-zinc-500 dark:text-zinc-400"
                             }`}
                           >
@@ -125,7 +125,7 @@ export function GroupStandings() {
                     <td className="px-1 py-2 text-center tabular-nums text-zinc-500">{s.gf}</td>
                     <td className="px-1 py-2 text-center tabular-nums text-zinc-500">{s.gc}</td>
                     <td className="px-1 py-2 text-center tabular-nums text-zinc-500">{s.dg}</td>
-                    <td className={`px-2 py-2 text-center font-bold tabular-nums ${s.live !== null ? "text-red-500" : ""}`}>{s.pts}</td>
+                    <td className={`px-2 py-2 text-center font-bold tabular-nums ${s.live !== null ? "text-live" : ""}`}>{s.pts}</td>
                   </tr>
                 ))}
               </tbody>

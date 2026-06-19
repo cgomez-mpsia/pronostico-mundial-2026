@@ -280,7 +280,7 @@ export function ParticipantsTable({ rows }: Props) {
                     {r.fullName}
                     <OnlineDot userId={r.userId} className="ml-1.5 align-middle" />
                     {r.abandonedAt && (
-                      <Badge variant="outline" className="ml-2 text-xs text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-800">
+                      <Badge variant="outline" className="ml-2 text-xs text-warning border-warning/25">
                         Abandonó
                       </Badge>
                     )}
@@ -334,7 +334,7 @@ export function ParticipantsTable({ rows }: Props) {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => setPendingAbandon({ participantId: r.participantId, abandoned: !!r.abandonedAt, fullName: r.fullName })}
-                          className={r.abandonedAt ? "" : "text-amber-600 dark:text-amber-400"}
+                          className={r.abandonedAt ? "" : "text-warning"}
                         >
                           {r.abandonedAt ? "Reactivar participante" : "Marcar como abandonado"}
                         </DropdownMenuItem>
@@ -412,7 +412,7 @@ export function ParticipantsTable({ rows }: Props) {
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitPasswordReset(); } }}
             />
             {passwordError && (
-              <p className="text-xs text-red-500">{passwordError}</p>
+              <p className="text-xs text-live">{passwordError}</p>
             )}
           </div>
           <DialogFooter>

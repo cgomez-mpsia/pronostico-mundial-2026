@@ -86,7 +86,7 @@ export function LiveMatchHero({
       className={
         finished
           ? "overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-          : "overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm dark:border-red-900/50 dark:bg-zinc-900"
+          : "overflow-hidden rounded-2xl border border-live/25 bg-white shadow-sm dark:bg-zinc-900"
       }
     >
       {/* Cinta superior: en vivo / finalizado */}
@@ -94,7 +94,7 @@ export function LiveMatchHero({
         className={
           finished
             ? "flex items-center justify-between bg-zinc-50 px-4 py-1.5 dark:bg-zinc-800/60"
-            : "flex items-center justify-between bg-red-50 px-4 py-1.5 dark:bg-red-950/40"
+            : "flex items-center justify-between bg-live/10 px-4 py-1.5"
         }
       >
         <span className="text-xs font-medium text-zinc-500">
@@ -104,8 +104,8 @@ export function LiveMatchHero({
         {finished ? (
           <span className="text-xs font-semibold text-zinc-500">Finalizado · {clock}</span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-live">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-live" />
             EN VIVO · {clock}
           </span>
         )}
@@ -124,7 +124,7 @@ export function LiveMatchHero({
             className={
               finished
                 ? "px-1 text-3xl font-bold tabular-nums sm:text-4xl"
-                : "px-1 text-3xl font-bold tabular-nums text-red-600 dark:text-red-500 sm:text-4xl"
+                : "px-1 text-3xl font-bold tabular-nums text-live sm:text-4xl"
             }
           >
             {homeScore} <span className="text-zinc-300 dark:text-zinc-600">—</span> {awayScore}
@@ -184,7 +184,7 @@ export function LiveMatchHero({
         <div className="pt-0.5">
           <Link
             href={`/dashboard/matches/${matchId}`}
-            className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+            className="inline-flex items-center gap-1 rounded-lg bg-live/10 px-3 py-1.5 text-xs font-semibold text-live hover:bg-live/15"
           >
             Ver detalle y pronósticos →
           </Link>
@@ -214,9 +214,9 @@ function PredictionBadge({
   const exact = prediction.homeScore === home && prediction.awayScore === away;
   const sameOutcome = Math.sign(prediction.homeScore - prediction.awayScore) === Math.sign(home - away);
   const status = exact
-    ? { text: `Pronóstico exacto${suffix}`, cls: "text-green-600 dark:text-green-400" }
+    ? { text: `Pronóstico exacto${suffix}`, cls: "text-success" }
     : sameOutcome
-      ? { text: `${finished ? "Acertaste" : "Vas acertando"} el resultado${suffix}`, cls: "text-blue-600 dark:text-blue-400" }
+      ? { text: `${finished ? "Acertaste" : "Vas acertando"} el resultado${suffix}`, cls: "text-info" }
       : { text: finished ? "Sin acierto" : `Por ahora, fuera${suffix}`, cls: "text-zinc-400" };
 
   return (

@@ -70,9 +70,9 @@ export function PasswordForm() {
           disabled={isPending}
         />
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="text-sm text-live">{error}</p>}
       {success && (
-        <p className="text-sm text-green-600 dark:text-green-400">
+        <p className="text-sm text-success">
           Contraseña actualizada exitosamente.
         </p>
       )}

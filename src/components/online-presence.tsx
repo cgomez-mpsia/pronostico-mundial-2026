@@ -65,7 +65,7 @@ export function OnlineDot({ userId, className = "" }: { userId: string; classNam
     <span
       title="En línea"
       aria-label="En línea"
-      className={`inline-block h-2 w-2 shrink-0 rounded-full bg-green-500 ${className}`}
+      className={`inline-block h-2 w-2 shrink-0 rounded-full bg-success ${className}`}
     />
   );
 }
@@ -79,7 +79,7 @@ export function OnlineCount() {
       className="hidden items-center gap-1.5 text-xs text-zinc-500 sm:flex"
       title={`${n} ${n === 1 ? "persona conectada" : "personas conectadas"}`}
     >
-      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
+      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-success" />
       {n} en línea
     </span>
   );

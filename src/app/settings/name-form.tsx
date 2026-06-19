@@ -57,8 +57,8 @@ export function NameForm({ currentName }: { currentName: string }) {
           {saving ? "Guardando…" : "Guardar"}
         </Button>
       </div>
-      {saved && <p className="text-xs text-green-600 dark:text-green-400">✓ Nombre actualizado</p>}
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {saved && <p className="text-xs text-success">✓ Nombre actualizado</p>}
+      {error && <p className="text-xs text-live">{error}</p>}
     </div>
   );
 }

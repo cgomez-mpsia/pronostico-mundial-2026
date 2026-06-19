@@ -101,7 +101,7 @@ export function AvatarForm({ fullName, avatarUrl }: AvatarFormProps) {
           )}
         </div>
         <p className="text-xs text-zinc-400">JPG, PNG o WebP · Máx. 2 MB</p>
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-live">{error}</p>}
       </div>
     </form>
   );

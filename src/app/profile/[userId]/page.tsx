@@ -198,7 +198,7 @@ export default async function ProfilePage({
           <h1 className="text-2xl font-semibold">
             {profileUser.fullName}
             {participant.abandonedAt && (
-              <span className="ml-2 align-middle rounded-full border border-amber-300 px-2 py-0.5 text-xs font-medium text-amber-600 dark:border-amber-800 dark:text-amber-400">
+              <span className="ml-2 align-middle rounded-full border border-warning/25 px-2 py-0.5 text-xs font-medium text-warning">
                 Abandonó
               </span>
             )}

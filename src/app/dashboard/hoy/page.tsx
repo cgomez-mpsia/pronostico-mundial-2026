@@ -281,13 +281,13 @@ export default async function HoyPage() {
                       )}
                     </td>
                     <td className="py-2 pr-4 text-center tabular-nums">
-                      <span className={s.points > 0 ? "font-bold text-blue-600 dark:text-blue-400" : "text-zinc-400"}>
+                      <span className={s.points > 0 ? "font-bold text-info" : "text-zinc-400"}>
                         {s.points > 0 ? `+${s.points}` : "0"}
                       </span>
                     </td>
                     <td className="py-2 text-center">
                       {s.exactCount > 0 ? (
-                        <span className="font-semibold text-green-600 dark:text-green-400">
+                        <span className="font-semibold text-success">
                           {s.exactCount} ✓
                         </span>
                       ) : (
@@ -347,7 +347,7 @@ export default async function HoyPage() {
                     </div>
                   ) : isLive ? (
                     <div className="flex flex-col items-center">
-                      <span className="text-2xl font-bold tabular-nums text-red-500">
+                      <span className="text-2xl font-bold tabular-nums text-live">
                         {m.homeScore ?? 0}{" — "}{m.awayScore ?? 0}
                       </span>
                     </div>
@@ -369,8 +369,8 @@ export default async function HoyPage() {
                   {STAGE_LABELS[m.stage] ?? m.stage}
                   {isFinished && <> · <span className="font-medium text-zinc-500">Finalizado</span></>}
                   {isLive && (
-                    <> · <span className="inline-flex items-center gap-1 font-semibold text-red-500">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                    <> · <span className="inline-flex items-center gap-1 font-semibold text-live">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-live" />
                       En vivo{liveMinute ? ` · ${liveMinute}` : ""}
                     </span></>
                   )}
@@ -418,9 +418,9 @@ export default async function HoyPage() {
                                     <span
                                       className={
                                         pts === 3
-                                          ? "font-bold text-green-600 dark:text-green-400"
+                                          ? "font-bold text-success"
                                           : pts > 0
-                                            ? "font-medium text-blue-600 dark:text-blue-400"
+                                            ? "font-medium text-info"
                                             : "text-zinc-400"
                                       }
                                       title={isCapped ? "No cuenta: tope de 2 pts por partidos sin pronóstico alcanzado" : undefined}

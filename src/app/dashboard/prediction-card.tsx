@@ -139,7 +139,7 @@ export function PredictionCard({
           </div>
         ) : isLive ? (
           <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold tabular-nums text-red-500">
+            <span className="text-2xl font-bold tabular-nums text-live">
               {matchHomeScore ?? 0}{" — "}{matchAwayScore ?? 0}
             </span>
           </div>
@@ -173,8 +173,8 @@ export function PredictionCard({
         {isFinished ? (
           <> · <span className="font-medium text-zinc-500">Finalizado</span></>
         ) : isLive ? (
-          <> · <span className="inline-flex items-center gap-1 font-semibold text-red-500">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+          <> · <span className="inline-flex items-center gap-1 font-semibold text-live">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-live" />
             En vivo{liveMinute ? ` · ${liveMinute}` : ""}
           </span></>
         ) : isOpen ? (
@@ -227,16 +227,16 @@ export function PredictionCard({
 
               {/* Error */}
               {error && (
-                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                <p className="text-xs text-live">{error}</p>
               )}
 
               {/* Botón + confirmación */}
               <div className="flex items-center gap-2">
                 {justSaved && (
-                  <span className="text-xs text-green-600 dark:text-green-400">✓ Guardado</span>
+                  <span className="text-xs text-success">✓ Guardado</span>
                 )}
                 {!justSaved && savedPrediction && (
-                  <span className="text-xs text-green-600 dark:text-green-400">
+                  <span className="text-xs text-success">
                     ✓ {savedPrediction.home} — {savedPrediction.away}
                   </span>
                 )}
@@ -247,7 +247,7 @@ export function PredictionCard({
               </div>
             </div>
           ) : (
-            <p className="text-center text-xs text-amber-600 dark:text-amber-400">
+            <p className="text-center text-xs text-warning">
               Pago pendiente — no puedes ingresar pronósticos.
             </p>
           )}
@@ -261,7 +261,7 @@ export function PredictionCard({
             href={`/dashboard/matches/${matchId}`}
             className={
               isLive
-                ? "inline-block rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+                ? "inline-block rounded-lg bg-live/10 px-3 py-1.5 text-xs font-semibold text-live hover:bg-live/15"
                 : "text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
             }
           >

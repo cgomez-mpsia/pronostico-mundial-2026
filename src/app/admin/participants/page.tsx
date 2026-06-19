@@ -48,7 +48,7 @@ export default async function AdminParticipantsPage() {
       <NewParticipantForm inscriptionFee={tournament?.inscriptionFee} />
 
       {!tournament && (
-        <p className="text-sm text-red-500">
+        <p className="text-sm text-live">
           No hay un torneo activo. Crea un torneo para agregar participantes.
         </p>
       )}

@@ -59,11 +59,11 @@ export function MatchTimeline({ events, homeCode, awayCode, homeFlagUrl, awayFla
           const name = isSub ? (
             // Cambio: quién entra (verde ↑) y quién sale (rojo ↓), una línea cada uno.
             <span className={`flex flex-col gap-0.5 ${home ? "items-end" : "items-start"}`}>
-              <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
+              <span className="inline-flex items-center gap-1 text-success">
                 {home ? <>{e.playerIn} <span aria-hidden>↑</span></> : <><span aria-hidden>↑</span> {e.playerIn}</>}
               </span>
               {e.playerOut && (
-                <span className="inline-flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
+                <span className="inline-flex items-center gap-1 text-xs text-live">
                   {home ? <>{e.playerOut} <span aria-hidden>↓</span></> : <><span aria-hidden>↓</span> {e.playerOut}</>}
                 </span>
               )}

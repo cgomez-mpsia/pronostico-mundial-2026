@@ -81,7 +81,7 @@ export function LiveControls({
         type="button"
         size="sm"
         variant="outline"
-        className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950"
+        className="border-live/25 text-live hover:bg-live/15"
         onClick={() => callAction("start")}
         disabled={loading === "start"}
       >
@@ -97,15 +97,15 @@ export function LiveControls({
       <div className="flex items-center justify-center gap-6 py-1">
         <div className="text-center min-w-0">
           <p className="text-xs text-zinc-500 truncate max-w-[72px]">{homeTeamName}</p>
-          <p className="text-3xl font-bold tabular-nums text-red-500">{localHome}</p>
+          <p className="text-3xl font-bold tabular-nums text-live">{localHome}</p>
         </div>
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[10px] font-semibold text-red-500 animate-pulse">● EN VIVO</span>
+          <span className="text-[10px] font-semibold text-live animate-pulse">● EN VIVO</span>
           <span className="text-lg text-zinc-400">—</span>
         </div>
         <div className="text-center min-w-0">
           <p className="text-xs text-zinc-500 truncate max-w-[72px]">{awayTeamName}</p>
-          <p className="text-3xl font-bold tabular-nums text-red-500">{localAway}</p>
+          <p className="text-3xl font-bold tabular-nums text-live">{localAway}</p>
         </div>
       </div>
 
@@ -115,7 +115,7 @@ export function LiveControls({
           <Button
             type="button"
             size="sm"
-            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+            className="w-full bg-success hover:bg-success text-success-foreground"
             onClick={() => callAction("goal_home")}
             disabled={!!loading}
           >
@@ -136,7 +136,7 @@ export function LiveControls({
           <Button
             type="button"
             size="sm"
-            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-600"
+            className="w-full bg-success hover:bg-success text-success-foreground"
             onClick={() => callAction("goal_away")}
             disabled={!!loading}
           >

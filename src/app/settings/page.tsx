@@ -85,11 +85,11 @@ export default async function SettingsPage() {
           <div className="flex items-center gap-3">
             <dt className="text-zinc-500 w-20 shrink-0">Cuota</dt>
             {participant?.hasPaid ? (
-              <dd className="font-medium text-green-600 dark:text-green-400">
+              <dd className="font-medium text-success">
                 Confirmada ✓
               </dd>
             ) : (
-              <dd className="font-medium text-amber-500">
+              <dd className="font-medium text-warning">
                 Pendiente de confirmación
               </dd>
             )}

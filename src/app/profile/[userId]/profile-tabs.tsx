@@ -130,9 +130,9 @@ export function ProfileTabs({
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-zinc-500">Cuota:</span>
                 {hasPaid ? (
-                  <span className="font-medium text-green-600 dark:text-green-400">Confirmada ✓</span>
+                  <span className="font-medium text-success">Confirmada ✓</span>
                 ) : (
-                  <span className="font-medium text-amber-500">Pendiente de confirmación</span>
+                  <span className="font-medium text-warning">Pendiente de confirmación</span>
                 )}
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -188,7 +188,7 @@ export function ProfileTabs({
                             : "No pronosticó"}
                         </td>
                         <td className="px-4 py-2.5 text-right">
-                          <span className="text-xs text-amber-500">Pendiente</span>
+                          <span className="text-xs text-warning">Pendiente</span>
                         </td>
                       </tr>
                     ))}
@@ -225,11 +225,11 @@ export function ProfileTabs({
 
                     {/* Fila de puntos de campeón */}
                     {championPoints > 0 && (
-                      <tr className="border-t-2 border-zinc-200 dark:border-zinc-700 bg-amber-50 dark:bg-amber-950/20">
+                      <tr className="border-t-2 border-zinc-200 dark:border-zinc-700 bg-warning/10">
                         <td className="px-4 py-2.5 font-medium" colSpan={2}>
                           Campeón Mundial
                         </td>
-                        <td className="px-4 py-2.5 text-right font-semibold text-amber-600 dark:text-amber-400">
+                        <td className="px-4 py-2.5 text-right font-semibold text-warning">
                           +{championPoints}
                         </td>
                       </tr>
@@ -268,6 +268,6 @@ function Stat({ label, value, sublabel }: { label: string; value: string; sublab
 function PointsBadge({ result, exact }: { result: number; exact: number }) {
   const total = result + exact;
   if (total === 0) return <span className="text-zinc-400">0</span>;
-  if (total === 3) return <span className="font-semibold text-green-600 dark:text-green-400">+3</span>;
-  return <span className="font-medium text-blue-600 dark:text-blue-400">+{total}</span>;
+  if (total === 3) return <span className="font-semibold text-success">+3</span>;
+  return <span className="font-medium text-info">+{total}</span>;
 }

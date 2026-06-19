@@ -150,7 +150,7 @@ export function PushNotifications({ isAdmin = false }: Props) {
   }
 
   if (debugInfo) {
-    return <span className="text-[10px] text-amber-500">{debugInfo}</span>;
+    return <span className="text-[10px] text-warning">{debugInfo}</span>;
   }
 
   if (showIOSBanner) {
@@ -182,7 +182,7 @@ export function PushNotifications({ isAdmin = false }: Props) {
             onClick={handleDisable} disabled={loading}
             title="Desactivar recordatorios de partidos"
           >
-            <Bell className="h-3.5 w-3.5 text-green-500" />
+            <Bell className="h-3.5 w-3.5 text-success" />
             <span className="hidden sm:inline">Notificaciones activas</span>
           </Button>
         ) : (

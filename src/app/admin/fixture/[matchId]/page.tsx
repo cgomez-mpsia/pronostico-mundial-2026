@@ -217,7 +217,7 @@ export default async function AdminMatchDetailPage({
           El plazo cerró. Los pronósticos están en modo solo lectura.
         </div>
       ) : (
-        <div className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+        <div className="rounded-lg bg-info/10 px-3 py-2 text-sm text-info">
           {submittedCount} / {rows.length} participantes ingresaron pronóstico.
         </div>
       )}

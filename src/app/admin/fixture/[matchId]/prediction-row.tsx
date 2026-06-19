@@ -113,7 +113,7 @@ export function PredictionRow({
                 </Button>
               </span>
               {deadlinePassed && (
-                <span className="text-[10px] text-amber-500">fuera de plazo</span>
+                <span className="text-[10px] text-warning">fuera de plazo</span>
               )}
             </span>
           ) : (
@@ -124,7 +124,7 @@ export function PredictionRow({
               {hasPred ? "Modificar" : "Cargar pronóstico"}
             </Button>
           )}
-          {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+          {error && <p className="text-xs text-live mt-0.5">{error}</p>}
         </td>
       </tr>
 

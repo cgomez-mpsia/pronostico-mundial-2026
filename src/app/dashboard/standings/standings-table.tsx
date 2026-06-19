@@ -124,7 +124,7 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
   return (
     <div className="overflow-x-auto">
       {hasLive && (
-        <p className="mb-2 flex items-center gap-1.5 text-xs text-red-500">
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-live">
           <span className="animate-pulse">●</span>
           Partido en vivo — puntos provisionales incluidos
         </p>
@@ -169,17 +169,17 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
                         <span className="ml-2 text-xs text-zinc-400">(tú)</span>
                       )}
                       {isAdmin && !s.hasPaid && (
-                        <span className="ml-2 text-xs text-amber-500">Pendiente</span>
+                        <span className="ml-2 text-xs text-warning">Pendiente</span>
                       )}
                     </span>
                   </div>
                 </td>
                 <td className="py-2.5 text-right tabular-nums">
-                  <span className={s.livePoints > 0 ? "font-semibold text-red-500" : "font-semibold"}>
+                  <span className={s.livePoints > 0 ? "font-semibold text-live" : "font-semibold"}>
                     {displayTotal}
                   </span>
                   {s.livePoints > 0 && (
-                    <span className="ml-1 text-[10px] text-red-400">(+{s.livePoints}●)</span>
+                    <span className="ml-1 text-[10px] text-live">(+{s.livePoints}●)</span>
                   )}
                 </td>
               </tr>

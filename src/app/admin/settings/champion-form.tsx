@@ -82,12 +82,12 @@ export function ChampionForm({ teams, applied, appliedAt }: Props) {
         }).format(new Date(appliedAt))
       : null;
     return (
-      <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
-        <p className="text-sm font-medium text-green-800 dark:text-green-200">
+      <div className="rounded-xl border border-success/25 bg-success/10 p-4">
+        <p className="text-sm font-medium text-success">
           ✓ Puntos de campeón ya aplicados
         </p>
         {date && (
-          <p className="mt-0.5 text-xs text-green-700 dark:text-green-400">{date}</p>
+          <p className="mt-0.5 text-xs text-success">{date}</p>
         )}
       </div>
     );

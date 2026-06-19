@@ -218,10 +218,10 @@ export default async function MatchDetailPage({
             </div>
           ) : isLive ? (
             <div className="flex flex-col items-center">
-              <span className="text-2xl font-bold tabular-nums text-red-500">
+              <span className="text-2xl font-bold tabular-nums text-live">
                 {matchRows.homeScore ?? 0} — {matchRows.awayScore ?? 0}
               </span>
-              <span className="text-[10px] font-semibold uppercase text-red-500 animate-pulse">
+              <span className="text-[10px] font-semibold uppercase text-live animate-pulse">
                 ● {espn?.clock || "En vivo"}
               </span>
             </div>
@@ -345,9 +345,9 @@ export default async function MatchDetailPage({
                             <span
                               className={
                                 pts === 3
-                                  ? "font-bold text-green-600 dark:text-green-400"
+                                  ? "font-bold text-success"
                                   : (pts ?? 0) > 0
-                                    ? "font-medium text-blue-600 dark:text-blue-400"
+                                    ? "font-medium text-info"
                                     : "text-zinc-400"
                               }
                               title={isCapped ? "No cuenta: tope de 2 pts por partidos sin pronóstico alcanzado" : undefined}

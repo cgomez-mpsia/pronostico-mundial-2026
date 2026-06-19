@@ -97,7 +97,7 @@ export default async function AdminPrizesPage() {
                     </td>
                     <td className="py-2 text-right tabular-nums">
                       {p?.prize ? (
-                        <span className="font-semibold text-green-700 dark:text-green-400">
+                        <span className="font-semibold text-success">
                           Bs. {p.prize.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
                         </span>
                       ) : (

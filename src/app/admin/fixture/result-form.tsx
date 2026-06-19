@@ -309,7 +309,7 @@ export function ResultForm({
                   )}
                 </div>
                 {extraTime === "aet" && fullScoreComplete && Number(homeFull) === Number(awayFull) && (
-                  <p className="text-amber-600 dark:text-amber-400">
+                  <p className="text-warning">
                     En AET debe haber ganador — si empató en 120 min, usa Penales.
                   </p>
                 )}

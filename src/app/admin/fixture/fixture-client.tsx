@@ -172,7 +172,7 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          className="text-red-600 focus:text-red-600"
+                          className="text-live focus:text-live"
                           onClick={() => setPendingDeleteId(m.matchId)}
                           disabled={deleting === m.matchId}
                         >
@@ -205,7 +205,7 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                       </div>
                     ) : m.status === "live" ? (
                       <div className="flex flex-col items-center">
-                        <span className="text-2xl font-bold tabular-nums text-red-500">
+                        <span className="text-2xl font-bold tabular-nums text-live">
                           {m.homeScore ?? 0}
                           {" — "}
                           {m.awayScore ?? 0}
@@ -237,12 +237,12 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                         </span>
                       )}
                       {m.status === "live" && (
-                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-600 animate-pulse dark:bg-red-900/30 dark:text-red-400">
+                        <span className="rounded-full bg-live/10 px-2 py-0.5 text-live animate-pulse">
                           🔴 En vivo
                         </span>
                       )}
                       {(!m.homeTeamName || !m.awayTeamName) && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                        <span className="rounded-full bg-warning/10 px-2 py-0.5 text-warning">
                           Por definir
                         </span>
                       )}

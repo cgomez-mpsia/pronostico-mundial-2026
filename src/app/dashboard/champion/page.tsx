@@ -59,7 +59,7 @@ export default async function ChampionPage() {
       </div>
 
       {!participant?.hasPaid && (
-        <p className="text-sm text-amber-600 dark:text-amber-400">
+        <p className="text-sm text-warning">
           Tu inscripción está pendiente de confirmación de pago.
         </p>
       )}

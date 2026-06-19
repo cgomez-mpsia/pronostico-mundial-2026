@@ -87,7 +87,7 @@ export function TournamentForm({ initialName, initialStatus }: Props) {
         </Alert>
       )}
       {success && (
-        <p className="text-sm text-green-600 dark:text-green-400">✓ Guardado correctamente.</p>
+        <p className="text-sm text-success">✓ Guardado correctamente.</p>
       )}
 
       <Button type="submit" size="sm" disabled={loading}>

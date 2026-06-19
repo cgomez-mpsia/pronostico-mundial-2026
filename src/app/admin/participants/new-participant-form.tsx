@@ -122,9 +122,9 @@ export function NewParticipantForm({ inscriptionFee }: { inscriptionFee?: string
         </form>
 
         {success && (
-          <Alert className="mt-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+          <Alert className="mt-4 border-success/25 bg-success/10">
             <AlertDescription className="space-y-1 text-sm">
-              <p className="font-semibold text-green-800 dark:text-green-200">
+              <p className="font-semibold text-success">
                 ✓ Cuenta creada para {success.fullName}
               </p>
               <p>
@@ -132,11 +132,11 @@ export function NewParticipantForm({ inscriptionFee }: { inscriptionFee?: string
               </p>
               <p>
                 <span className="font-medium">Contraseña:</span>{" "}
-                <code className="rounded bg-green-100 px-1 dark:bg-green-900">
+                <code className="rounded bg-success/10 px-1">
                   {success.password}
                 </code>
               </p>
-              <p className="text-xs text-green-700 dark:text-green-400">
+              <p className="text-xs text-success">
                 Comparte estas credenciales con el participante (ej. WhatsApp).
               </p>
             </AlertDescription>
