@@ -275,6 +275,7 @@ type SummaryCommentary = {
     team?: { displayName?: string };
     clock?: { displayValue?: string };
     period?: { number?: number };
+    fieldPositionX?: number; // 0-100 hacia el arco rival (100 = sobre la línea de gol)
   };
 };
 type SummaryBoxTeam = {
@@ -372,7 +373,7 @@ export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | nu
     if (!pc) continue;
     const t = timelineMinute(inferPeriod(p.period?.number, pc.base), pc.base, pc.extra, s1);
     maxMinute = Math.max(maxMinute, t);
-    actions.push({ minute: t, side, type: p.type?.text ?? "" });
+    actions.push({ minute: t, side, type: p.type?.text ?? "", fieldX: p.fieldPositionX });
   }
   const momentum = computeMomentum(actions, maxMinute);
   const htMark = hasSecondHalf ? 45 + s1 : null;

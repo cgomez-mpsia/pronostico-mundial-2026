@@ -14,6 +14,8 @@ export type MomentumAction = {
   side: MomentumSide;
   /** texto del tipo de jugada de ESPN, p. ej. "Shot On Target" */
   type: string;
+  /** posición en cancha hacia el arco rival (0-100); 100 = sobre la línea de gol */
+  fieldX?: number;
 };
 
 export type MomentumPoint = {
@@ -41,6 +43,22 @@ export function actionWeight(type: string): number {
     if (test.test(type)) return weight;
   }
   return 0;
+}
+
+// Zona de "ataque peligroso": último tercio del campo hacia el arco rival.
+const DANGER_ZONE_START = 66; // % de cancha (0-100)
+const DANGER_MAX_BOOST = 0.8; // un tiro sobre la línea de gol pesa 1.8×
+
+/**
+ * Multiplicador por peligrosidad para los TIROS según su cercanía al arco
+ * (ESPN no expone "ataques peligrosos", pero sí la posición de cada tiro): un
+ * remate dentro del área pesa más que uno lejano. 1 fuera del último tercio o
+ * sin posición; hasta 1 + DANGER_MAX_BOOST sobre la línea de gol.
+ */
+export function dangerMultiplier(type: string, fieldX?: number): number {
+  if (fieldX == null || !/shot/i.test(type)) return 1;
+  const depth = Math.min(1, Math.max(0, (fieldX - DANGER_ZONE_START) / (100 - DANGER_ZONE_START)));
+  return 1 + depth * DANGER_MAX_BOOST;
 }
 
 /** Parsea el reloj de ESPN ("16'", "45'+3'", "90'+6'") en minuto base + descuento. */
@@ -92,7 +110,7 @@ export function computeMomentum(
   const raw = new Array<number>(last + 1).fill(0);
 
   for (const a of actions) {
-    const w = actionWeight(a.type);
+    const w = actionWeight(a.type) * dangerMultiplier(a.type, a.fieldX);
     if (w === 0) continue;
     const idx = Math.min(last, Math.max(0, Math.round(a.minute)));
     raw[idx] += a.side === "home" ? w : -w;
