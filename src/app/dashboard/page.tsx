@@ -263,9 +263,9 @@ export default async function DashboardPage() {
         </p>
       )}
 
-      {/* Partido(s) en vivo — hero a todo el ancho, apilados si hay más de uno */}
+      {/* Partido(s) en vivo — hero destacado (ancho acotado), apilados si hay más de uno */}
       {liveRows.length > 0 && (
-        <section className="space-y-4">
+        <section className="max-w-2xl space-y-4">
           {liveRows.map((m) => {
             const pred = predMap.get(m.matchId);
             return (
