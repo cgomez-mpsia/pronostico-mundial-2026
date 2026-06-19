@@ -5,7 +5,6 @@ import { matches, teams } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { fetchEspnByCodes, fetchEspnSummary, type LiveSummary } from "@/lib/espn";
-import { parseMinute } from "@/lib/momentum";
 
 // Feed en vivo de un partido para el hero del dashboard: marcador, minuto,
 // eventos (goles/tarjetas/cambios), estadísticas y curva de momentum.
@@ -47,16 +46,14 @@ export async function GET(req: Request) {
     if (!summary) return NextResponse.json({ summary: null });
 
     // El minuto/estado en vivo es más fiable en el scoreboard que en el summary.
-    // Extendemos el eje del gráfico hasta el minuto actual del reloj, no solo
-    // hasta la última acción del commentary, para que llegue al "ahora".
-    const liveMinute = parseMinute(scoreboard.clock) ?? 0;
+    // El eje del gráfico usa la línea de tiempo segmentada que arma el summary
+    // (consciente de periodos), así que no lo sobrescribimos con el reloj crudo.
     const merged: LiveSummary = {
       ...summary,
       clock: scoreboard.clock || summary.clock,
       status: scoreboard.status,
       homeScore: scoreboard.homeScore ?? summary.homeScore,
       awayScore: scoreboard.awayScore ?? summary.awayScore,
-      maxMinute: Math.max(summary.maxMinute, liveMinute),
     };
     return NextResponse.json({ summary: merged });
   } catch {

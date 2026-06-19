@@ -1,4 +1,4 @@
-import { computeMomentum, parseMinute, type MomentumAction, type MomentumPoint } from "@/lib/momentum";
+import { computeMomentum, parseClock, parseMinute, timelineMinute, type MomentumAction, type MomentumPoint } from "@/lib/momentum";
 
 // Cliente del scoreboard de ESPN para el Mundial · fuente de marcadores en vivo.
 //
@@ -247,6 +247,10 @@ export type LiveSummary = {
   events: LiveEvent[];
   momentum: MomentumPoint[];
   maxMinute: number;
+  // Posición (en minutos de la línea de tiempo) del medio tiempo = final real del
+  // 1T (45 + descuento). null si el 2T aún no empieza. htLabel: etiqueta "45+4'".
+  htMark: number | null;
+  htLabel: string | null;
   possession: LiveStatPair | null;
   shots: LiveStatPair | null;
   shotsOnTarget: LiveStatPair | null;
@@ -260,12 +264,18 @@ type SummaryCompetitor = {
 type SummaryKeyEvent = {
   type?: { type?: string; text?: string };
   clock?: { displayValue?: string };
+  period?: { number?: number };
   team?: { id?: string };
   participants?: { athlete?: { displayName?: string } }[];
 };
 type SummaryCommentary = {
   time?: { displayValue?: string };
-  play?: { type?: { text?: string }; team?: { displayName?: string }; clock?: { displayValue?: string } };
+  play?: {
+    type?: { text?: string };
+    team?: { displayName?: string };
+    clock?: { displayValue?: string };
+    period?: { number?: number };
+  };
 };
 type SummaryBoxTeam = {
   team?: { id?: string };
@@ -306,6 +316,27 @@ export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | nu
   if (home.team.displayName) sideByName.set(home.team.displayName, "home");
   if (away.team.displayName) sideByName.set(away.team.displayName, "away");
 
+  // ── Línea de tiempo segmentada por periodos ───────────────────────────────
+  // El descuento del 1T ("45'+n") debe ir ANTES del 2T y no chocar con sus
+  // minutos. Calculamos el descuento del 1T (s1) y desplazamos el 2T por s1, y
+  // ubicamos el medio tiempo en 45 + s1 (final real del primer tiempo).
+  const inferPeriod = (declared: number | undefined, base: number) =>
+    declared && declared > 0 ? declared : base <= 45 ? 1 : 2;
+
+  let s1 = 0;
+  let hasSecondHalf = false;
+  const scan = (declared: number | undefined, display: string) => {
+    const pc = parseClock(display);
+    if (!pc) return;
+    const period = inferPeriod(declared, pc.base);
+    if (period >= 2) hasSecondHalf = true;
+    if (period === 1 && pc.base >= 45 && pc.extra > 0) s1 = Math.max(s1, pc.extra);
+  };
+  for (const k of data.keyEvents ?? []) scan(k.period?.number, k.clock?.displayValue ?? "");
+  for (const c of data.commentary ?? []) scan(c.play?.period?.number, c.play?.clock?.displayValue ?? c.time?.displayValue ?? "");
+
+  let maxMinute = 0;
+
   // Eventos clave: goles, tarjetas y cambios.
   const events: LiveEvent[] = [];
   for (const k of data.keyEvents ?? []) {
@@ -314,10 +345,13 @@ export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | nu
     const side = k.team?.id ? sideById.get(k.team.id) : undefined;
     if (!side) continue;
     const display = k.clock?.displayValue ?? "";
+    const pc = parseClock(display);
+    const t = pc ? timelineMinute(inferPeriod(k.period?.number, pc.base), pc.base, pc.extra, s1) : 0;
+    maxMinute = Math.max(maxMinute, t);
     const names = (k.participants ?? []).map((p) => p.athlete?.displayName ?? "").filter(Boolean);
     events.push({
       minute: display,
-      minuteValue: parseMinute(display) ?? 0,
+      minuteValue: t,
       type,
       side,
       // En un cambio, ESPN ordena [entra, sale]; para el resto, el jugador del evento.
@@ -329,18 +363,20 @@ export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | nu
 
   // Momentum derivado del commentary jugada-a-jugada.
   const actions: MomentumAction[] = [];
-  let maxMinute = 0;
   for (const c of data.commentary ?? []) {
     const p = c.play;
     if (!p?.team?.displayName) continue;
     const side = sideByName.get(p.team.displayName);
     if (!side) continue;
-    const minute = parseMinute(p.clock?.displayValue ?? c.time?.displayValue ?? "");
-    if (minute == null) continue;
-    maxMinute = Math.max(maxMinute, minute);
-    actions.push({ minute, side, type: p.type?.text ?? "" });
+    const pc = parseClock(p.clock?.displayValue ?? c.time?.displayValue ?? "");
+    if (!pc) continue;
+    const t = timelineMinute(inferPeriod(p.period?.number, pc.base), pc.base, pc.extra, s1);
+    maxMinute = Math.max(maxMinute, t);
+    actions.push({ minute: t, side, type: p.type?.text ?? "" });
   }
   const momentum = computeMomentum(actions, maxMinute);
+  const htMark = hasSecondHalf ? 45 + s1 : null;
+  const htLabel = hasSecondHalf ? (s1 > 0 ? `45+${s1}'` : "45'") : null;
 
   // Estadísticas agregadas (posesión / tiros).
   const statBySide = (name: string): LiveStatPair | null => {
@@ -365,6 +401,8 @@ export async function fetchEspnSummary(espnId: string): Promise<LiveSummary | nu
     events,
     momentum,
     maxMinute: Math.max(45, maxMinute),
+    htMark,
+    htLabel,
     possession: statBySide("possessionPct"),
     shots: statBySide("totalShots"),
     shotsOnTarget: statBySide("shotsOnTarget"),

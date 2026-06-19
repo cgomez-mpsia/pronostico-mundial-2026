@@ -1,5 +1,29 @@
 import { describe, it, expect } from "vitest";
-import { actionWeight, parseMinute, computeMomentum, type MomentumAction } from "./momentum";
+import { actionWeight, parseMinute, parseClock, timelineMinute, computeMomentum, type MomentumAction } from "./momentum";
+
+describe("parseClock", () => {
+  it("separa base y descuento", () => {
+    expect(parseClock("16'")).toEqual({ base: 16, extra: 0 });
+    expect(parseClock("45'+4'")).toEqual({ base: 45, extra: 4 });
+    expect(parseClock("90'+6'")).toEqual({ base: 90, extra: 6 });
+  });
+  it("null si no hay número", () => {
+    expect(parseClock("HT")).toBeNull();
+  });
+});
+
+describe("timelineMinute (eje segmentado por periodos)", () => {
+  const s1 = 4; // descuento del 1T
+  it("1T sin cambios: base + descuento", () => {
+    expect(timelineMinute(1, 16, 0, s1)).toBe(16);
+    expect(timelineMinute(1, 45, 4, s1)).toBe(49); // 45'+4' = final del 1T
+  });
+  it("2T se desplaza por el descuento del 1T (evita colisión)", () => {
+    // "49'" del 2T NO debe colisionar con "45'+4'" del 1T (ambos serían 49 sin segmentar)
+    expect(timelineMinute(2, 49, 0, s1)).toBe(53);
+    expect(timelineMinute(1, 45, 4, s1)).toBeLessThan(timelineMinute(2, 46, 0, s1));
+  });
+});
 
 describe("parseMinute", () => {
   it("parsea minuto simple", () => {

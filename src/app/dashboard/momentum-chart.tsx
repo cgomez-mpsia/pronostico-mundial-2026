@@ -7,6 +7,9 @@ interface Props {
   momentum: MomentumPoint[];
   events: LiveEvent[];
   maxMinute: number;
+  htMark: number | null; // posición del medio tiempo en la línea de tiempo (45 + descuento)
+  htLabel: string | null; // etiqueta del medio tiempo, p. ej. "45+4'"
+  endLabel: string; // etiqueta del extremo derecho (minuto actual o "F")
   homeColor: string; // hex sin '#'
   awayColor: string;
   homeCode: string;
@@ -35,6 +38,9 @@ export function MomentumChart({
   momentum,
   events,
   maxMinute,
+  htMark,
+  htLabel,
+  endLabel,
   homeColor,
   awayColor,
   homeCode,
@@ -101,12 +107,35 @@ export function MomentumChart({
         {/* Línea base central */}
         <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-zinc-300 dark:bg-zinc-600" />
 
-        {/* Divisor de medio tiempo */}
+        {/* Medio tiempo: línea reglamentaria (45') + reanudación del 2T (45+desc).
+            Entre ambas queda el descuento del 1T; el 2T arranca después. */}
         {span > 45 && (
           <div
             className="absolute inset-y-2 w-px border-l border-dashed border-zinc-300 dark:border-zinc-600"
             style={{ left: pct(45) }}
           />
+        )}
+        {htMark !== null && htMark < span && (
+          <>
+            {/* Banda de descuento del 1T entre 45 y el medio tiempo real */}
+            {htMark > 45 && (
+              <div
+                className="absolute inset-y-2 bg-zinc-200/40 dark:bg-zinc-700/30"
+                style={{ left: pct(45), width: `${Math.max(0, (htMark - 45) / span) * 100}%` }}
+              />
+            )}
+            <div
+              className="absolute inset-y-2 w-px border-l border-dashed border-zinc-400 dark:border-zinc-500"
+              style={{ left: pct(htMark) }}
+            />
+            {/* Etiqueta del medio tiempo real (45 + descuento) */}
+            <span
+              className="absolute top-0.5 -translate-x-1/2 whitespace-nowrap rounded bg-white/85 px-1 text-[9px] font-semibold text-zinc-500 dark:bg-zinc-900/85"
+              style={{ left: pct(htMark) }}
+            >
+              MT {htLabel}
+            </span>
+          </>
         )}
 
         {/* Marcadores de eventos sobre la línea base */}
@@ -127,8 +156,7 @@ export function MomentumChart({
       {/* Eje de tiempo */}
       <div className="relative mt-1 h-3 text-[10px] font-medium text-zinc-400">
         <span className="absolute left-0">IN</span>
-        <span className="absolute -translate-x-1/2" style={{ left: pct(45) }}>MT</span>
-        <span className="absolute right-0">{span >= 90 ? "F" : `${span}'`}</span>
+        <span className="absolute right-0">{endLabel}</span>
       </div>
     </div>
   );

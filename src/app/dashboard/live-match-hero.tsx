@@ -157,6 +157,9 @@ export function LiveMatchHero({
             momentum={summary.momentum}
             events={summary.events}
             maxMinute={summary.maxMinute}
+            htMark={summary.htMark}
+            htLabel={summary.htLabel}
+            endLabel={finished ? "F" : clock}
             homeColor={summary.homeColor}
             awayColor={summary.awayColor}
             homeCode={homeTeamCode}

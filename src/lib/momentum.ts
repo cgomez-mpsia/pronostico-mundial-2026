@@ -43,13 +43,34 @@ export function actionWeight(type: string): number {
   return 0;
 }
 
-/** Parsea el reloj de ESPN ("16'", "45'+3'", "90'+6'") a un minuto entero. */
-export function parseMinute(display: string): number | null {
+/** Parsea el reloj de ESPN ("16'", "45'+3'", "90'+6'") en minuto base + descuento. */
+export function parseClock(display: string): { base: number; extra: number } | null {
   const m = display.match(/(\d+)\s*'?(?:\s*\+\s*(\d+))?/);
   if (!m) return null;
   const base = Number(m[1]);
-  const extra = m[2] ? Number(m[2]) : 0;
-  return Number.isFinite(base) ? base + extra : null;
+  if (!Number.isFinite(base)) return null;
+  return { base, extra: m[2] ? Number(m[2]) : 0 };
+}
+
+/** Parsea el reloj de ESPN a un minuto entero (base + descuento). */
+export function parseMinute(display: string): number | null {
+  const c = parseClock(display);
+  return c ? c.base + c.extra : null;
+}
+
+/**
+ * Minuto en una línea de tiempo segmentada por periodos. El descuento del 1T
+ * ("45'+n") debe quedar ANTES del 2T y no colisionar con sus minutos: por eso
+ * el 2T (y posteriores) se desplaza por `firstHalfStoppage` minutos. Así el
+ * medio tiempo cae en el final real del primer tiempo (45 + descuento).
+ */
+export function timelineMinute(
+  period: number,
+  base: number,
+  extra: number,
+  firstHalfStoppage: number
+): number {
+  return period >= 2 ? base + extra + firstHalfStoppage : base + extra;
 }
 
 /**
