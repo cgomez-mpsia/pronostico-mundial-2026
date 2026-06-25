@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { tournaments, participants, users, matchPoints, teams, matches, predictions } from "@/db/schema";
 import { eq, or, sql, and, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { calculateMatchPoints, applyUnplacedCap } from "@/lib/points";
+import { calculateMatchPoints, applyUnplacedCap, UNPLACED_POINTS_CAP } from "@/lib/points";
 
 export async function GET() {
   const supabase = await createClient();
@@ -71,17 +71,29 @@ export async function GET() {
 
   // Live hypothetical points for matches in progress
   const liveMatches = await db
-    .select({ id: matches.id, homeScore: matches.homeScore, awayScore: matches.awayScore })
+    .select({
+      id: matches.id,
+      homeScore: matches.homeScore,
+      awayScore: matches.awayScore,
+      scheduledAt: matches.scheduledAt,
+    })
     .from(matches)
     .where(and(eq(matches.tournamentId, tournament.id), eq(matches.status, "live")));
 
-  // BR-006: puntos en vivo separados en colocados/no colocados por participante,
-  // para combinarlos con lo finalizado ANTES de aplicar el tope acumulado.
-  const livePlacedMap = new Map<string, number>();
-  const liveUnplacedMap = new Map<string, number>();
+  // Orden determinista (scheduledAt, matchId), compartido por todas las vistas
+  // para atribuir el tope BR-006 de forma estable entre partidos simultáneos.
+  const sortedLive = [...liveMatches].sort((a, b) => {
+    const t = a.scheduledAt.getTime() - b.scheduledAt.getTime();
+    return t !== 0 ? t : a.id.localeCompare(b.id);
+  });
 
-  if (liveMatches.length > 0) {
-    const liveMatchIds = liveMatches.map((m) => m.id);
+  // BR-006: contribución de cada partido en vivo por participante, en orden, con
+  // bandera placed/unplaced (el tope acumulado se aplica luego, al combinar con
+  // lo finalizado).
+  const liveContribMap = new Map<string, Array<{ pts: number; isPlaced: boolean }>>();
+
+  if (sortedLive.length > 0) {
+    const liveMatchIds = sortedLive.map((m) => m.id);
 
     const livePredictions = await db
       .select({
@@ -100,9 +112,8 @@ export async function GET() {
     }
 
     for (const row of rows) {
-      let placed = 0;
-      let unplaced = 0;
-      for (const lm of liveMatches) {
+      const contribs: Array<{ pts: number; isPlaced: boolean }> = [];
+      for (const lm of sortedLive) {
         if (lm.homeScore === null || lm.awayScore === null) continue;
         const pred = predMap.get(`${row.participantId}:${lm.id}`) ?? null;
         const isPlaced = pred !== null && pred.isManuallyEntered;
@@ -112,11 +123,9 @@ export async function GET() {
             : null,
           { homeScore: lm.homeScore, awayScore: lm.awayScore }
         ).totalPoints;
-        if (isPlaced) placed += pts;
-        else unplaced += pts;
+        contribs.push({ pts, isPlaced });
       }
-      livePlacedMap.set(row.participantId, placed);
-      liveUnplacedMap.set(row.participantId, unplaced);
+      liveContribMap.set(row.participantId, contribs);
     }
   }
 
@@ -126,15 +135,24 @@ export async function GET() {
     const placedFinished = Number(row.placedFinished);
     const unplacedFinished = Number(row.unplacedFinished);
     const champion = row.championPoints ?? 0;
-    const placedLive = livePlacedMap.get(row.participantId) ?? 0;
-    const unplacedLive = liveUnplacedMap.get(row.participantId) ?? 0;
+
+    // Desglose por partido en vivo, aplicando el tope BR-006 al no colocado: lo ya
+    // gastado en partidos finalizados consume el cupo, y lo que queda se reparte
+    // entre los partidos en vivo en orden determinista. Los colocados no se topan.
+    const contribs = liveContribMap.get(row.participantId) ?? [];
+    let remainingCap = Math.max(0, UNPLACED_POINTS_CAP - unplacedFinished);
+    const liveDeltas: number[] = [];
+    for (const c of contribs) {
+      let value = c.pts;
+      if (!c.isPlaced) {
+        value = Math.min(remainingCap, c.pts);
+        remainingCap -= value;
+      }
+      if (value > 0) liveDeltas.push(value);
+    }
+    const livePoints = liveDeltas.reduce((s, v) => s + v, 0);
 
     const officialTotal = applyUnplacedCap(placedFinished, unplacedFinished, champion);
-    const displayTotal = applyUnplacedCap(
-      placedFinished + placedLive,
-      unplacedFinished + unplacedLive,
-      champion
-    );
 
     return {
       rank: 0,
@@ -146,7 +164,11 @@ export async function GET() {
       championTeamName: row.championTeamName ?? null,
       hasPaid: row.hasPaid,
       totalPoints: officialTotal,
-      livePoints: displayTotal - officialTotal,
+      livePoints,
+      // Contribución de cada partido en vivo (ya topada), para mostrar "(+3, +1)".
+      liveDeltas,
+      // Cantidad de partidos en vivo (para el aviso; mismo valor en todas las filas).
+      liveMatchCount: liveMatches.length,
     };
   });
 

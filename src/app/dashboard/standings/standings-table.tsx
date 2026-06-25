@@ -17,6 +17,8 @@ interface Standing {
   hasPaid: boolean;
   totalPoints: number;
   livePoints: number;
+  liveDeltas: number[];
+  liveMatchCount: number;
 }
 
 function initials(name: string) {
@@ -119,14 +121,17 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
     );
   }
 
-  const hasLive = standings.some((s) => s.livePoints > 0);
+  const liveMatchCount = standings[0]?.liveMatchCount ?? 0;
+  const hasLive = liveMatchCount > 0;
 
   return (
     <div className="overflow-x-auto">
       {hasLive && (
         <p className="mb-2 flex items-center gap-1.5 text-xs text-live">
           <span className="animate-pulse">●</span>
-          Partido en vivo — puntos provisionales incluidos
+          {liveMatchCount === 1
+            ? "Partido en vivo — puntos provisionales incluidos"
+            : `${liveMatchCount} partidos en vivo — puntos provisionales incluidos`}
         </p>
       )}
       <table className="w-full text-sm">
@@ -178,8 +183,10 @@ export function StandingsTable({ currentUserId, isAdmin }: { currentUserId: stri
                   <span className={s.livePoints > 0 ? "font-semibold text-live" : "font-semibold"}>
                     {displayTotal}
                   </span>
-                  {s.livePoints > 0 && (
-                    <span className="ml-1 text-[10px] text-live">(+{s.livePoints}●)</span>
+                  {s.liveDeltas.length > 0 && (
+                    <span className="ml-1 text-[10px] text-live">
+                      ({s.liveDeltas.map((d) => `+${d}`).join(", ")}●)
+                    </span>
                   )}
                 </td>
               </tr>
