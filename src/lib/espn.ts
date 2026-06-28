@@ -32,12 +32,18 @@ export type EspnMatch = {
   status: "scheduled" | "live" | "finished";
   detail: string; // "FT", "AET", "HT", "45'", etc.
   clock: string; // minuto de juego en vivo: "73'", "90'+6'"
+  // true solo si el partido finished se decidió en los 90' reglamentarios.
+  // false si hubo prórroga o penales (period > 2, tanda, o detail "AET"/"Pens").
+  // El marcador de ESPN incluiría esos goles extra, que NO cuentan (BR-003), así
+  // que el sync no debe auto-finalizar estos partidos (los resuelve el admin).
+  decidedInRegulation: boolean;
   plays: EspnPlay[]; // goles/tarjetas/cambios con minuto y jugador
 };
 
 type EspnCompetitor = {
   homeAway: "home" | "away";
   score?: string;
+  shootoutScore?: number; // tanda de penales (presente solo si hubo)
   team?: { abbreviation?: string };
 };
 
@@ -51,9 +57,20 @@ type EspnDetail = {
 type EspnEvent = {
   id: string;
   date: string;
-  status?: { displayClock?: string; type?: { state?: string; detail?: string } };
+  status?: { period?: number; displayClock?: string; type?: { name?: string; state?: string; detail?: string } };
   competitions?: { competitors?: EspnCompetitor[]; details?: EspnDetail[] }[];
 };
+
+/** ¿El partido finished se decidió en los 90' (sin prórroga ni penales)?
+ *  Señales de ESPN, en defensa en profundidad: period > 2 (prórroga/penales),
+ *  shootoutScore presente (tanda) o el texto del estado/detalle ("AET"/"Pen"). */
+function decidedInRegulation(e: EspnEvent, competitors: EspnCompetitor[]): boolean {
+  if ((e.status?.period ?? 0) > 2) return false;
+  if (competitors.some((c) => c.shootoutScore != null)) return false;
+  const txt = `${e.status?.type?.name ?? ""} ${e.status?.type?.detail ?? ""}`;
+  if (/\b(AET|ET|PEN|PENALT|SHOOTOUT)\b/i.test(txt)) return false;
+  return true;
+}
 
 /** "YYYYMMDD" en UTC, para el parámetro ?dates de ESPN. */
 export function espnDate(d: Date): string {
@@ -138,6 +155,7 @@ export async function fetchEspnMatches(dates: string[]): Promise<EspnMatch[]> {
         status: mapStatus(e.status?.type?.state),
         detail: e.status?.type?.detail ?? "",
         clock: e.status?.displayClock ?? "",
+        decidedInRegulation: decidedInRegulation(e, comp?.competitors ?? []),
         plays,
       });
     }

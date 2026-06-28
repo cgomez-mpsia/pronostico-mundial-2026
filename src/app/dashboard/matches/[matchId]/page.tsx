@@ -101,13 +101,16 @@ export default async function MatchDetailPage({
   // (sin atribución de equipo) para no perder la información.
   const timeline = (espn?.plays ?? []).filter((p) => p.isGoal || p.isCard);
 
-  const displayHomeScore = matchRows.extraTime && matchRows.homeScoreFull !== null
-    ? matchRows.homeScoreFull
-    : matchRows.homeScore;
-  const displayAwayScore = matchRows.extraTime && matchRows.awayScoreFull !== null
-    ? matchRows.awayScoreFull
-    : matchRows.awayScore;
-  const extraTimeBadge = matchRows.extraTime === "pen" ? "pen." : matchRows.extraTime === "aet" ? "a.e.t." : null;
+  // La quiniela muestra y puntúa SIEMPRE el marcador de los 90' (BR-003); la
+  // prórroga/penales va en una línea informativa aparte.
+  const displayHomeScore = matchRows.homeScore;
+  const displayAwayScore = matchRows.awayScore;
+  const knockoutNote =
+    matchRows.extraTime === "aet"
+      ? `Prórroga: ${matchRows.homeScoreFull ?? "?"} — ${matchRows.awayScoreFull ?? "?"}`
+      : matchRows.extraTime === "pen"
+        ? "Penales"
+        : null;
   const winnerName = matchRows.matchWinnerId
     ? matchRows.matchWinnerId === matchRows.homeTeamId
       ? (matchRows.homeTeamName ?? null)
@@ -212,8 +215,8 @@ export default async function MatchDetailPage({
               <span className="text-2xl font-bold tabular-nums">
                 {displayHomeScore} — {displayAwayScore}
               </span>
-              {extraTimeBadge && (
-                <span className="text-xs font-medium text-zinc-400">({extraTimeBadge})</span>
+              {knockoutNote && (
+                <span className="text-[10px] font-medium uppercase tracking-wide text-zinc-400">90 min</span>
               )}
             </div>
           ) : isLive ? (
@@ -237,9 +240,10 @@ export default async function MatchDetailPage({
             </span>
           </div>
         </div>
-        {isFinished && extraTimeBadge && winnerName && (
+        {isFinished && knockoutNote && (
           <p className="text-center text-sm text-zinc-500">
-            Avanza: <span className="font-medium">{winnerName}</span>
+            {knockoutNote}
+            {winnerName && <> · Avanza <span className="font-medium">{winnerName}</span></>}
           </p>
         )}
         <p className="text-sm text-zinc-500 text-center">{formatBOT(matchRows.scheduledAt)}</p>

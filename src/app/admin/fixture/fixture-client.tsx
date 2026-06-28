@@ -146,8 +146,13 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
             {stageMatches.map((m) => {
               const homeName = m.homeTeamName ?? "Por definir";
               const awayName = m.awayTeamName ?? "Por definir";
-              const extraTimeBadge =
-                m.extraTime === "pen" ? "pen." : m.extraTime === "aet" ? "a.e.t." : null;
+              // 90' es lo que cuenta (BR-003); prórroga/penales va en línea aparte.
+              const knockoutNote =
+                m.extraTime === "aet"
+                  ? `Prórroga: ${m.homeScoreFull ?? "?"} — ${m.awayScoreFull ?? "?"}`
+                  : m.extraTime === "pen"
+                    ? "Penales"
+                    : null;
 
               return (
                 <div
@@ -195,12 +200,10 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                     {m.status === "finished" ? (
                       <div className="flex flex-col items-center">
                         <span className="text-2xl font-bold tabular-nums">
-                          {m.extraTime && m.homeScoreFull !== null ? m.homeScoreFull : m.homeScore}
-                          {" — "}
-                          {m.extraTime && m.awayScoreFull !== null ? m.awayScoreFull : m.awayScore}
+                          {m.homeScore}{" — "}{m.awayScore}
                         </span>
-                        {extraTimeBadge && (
-                          <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
+                        {knockoutNote && (
+                          <span className="text-[10px] uppercase tracking-wide text-zinc-400">90 min</span>
                         )}
                       </div>
                     ) : m.status === "live" ? (
@@ -225,6 +228,10 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                       <span className="hidden text-sm font-semibold sm:block">{awayName}</span>
                     </div>
                   </div>
+
+                  {m.status === "finished" && knockoutNote && (
+                    <p className="mt-1 text-center text-xs text-zinc-500">{knockoutNote}</p>
+                  )}
 
                   {/* Meta: etapa + fecha sin hora + badges */}
                   <div className="mt-2 space-y-0.5 text-center text-xs text-zinc-400">

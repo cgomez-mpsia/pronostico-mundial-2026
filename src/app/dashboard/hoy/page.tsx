@@ -315,9 +315,15 @@ export default async function HoyPage() {
           const liveMinute = isLive ? liveMinuteByPair.get(hoyPairKey(m.homeTeamCode, m.awayTeamCode)) : null;
           const now = new Date();
           const deadlinePassed = now >= m.deadlineAt;
-          const displayHome = m.extraTime && m.homeScoreFull !== null ? m.homeScoreFull : m.homeScore;
-          const displayAway = m.extraTime && m.awayScoreFull !== null ? m.awayScoreFull : m.awayScore;
-          const extraTimeBadge = m.extraTime === "pen" ? "pen." : m.extraTime === "aet" ? "a.e.t." : null;
+          // 90' es lo que cuenta (BR-003); prórroga/penales va en línea aparte.
+          const displayHome = m.homeScore;
+          const displayAway = m.awayScore;
+          const knockoutNote =
+            m.extraTime === "aet"
+              ? `Prórroga: ${m.homeScoreFull ?? "?"} — ${m.awayScoreFull ?? "?"}`
+              : m.extraTime === "pen"
+                ? "Penales"
+                : null;
           const matchRows = rowsByMatch.get(m.matchId) ?? [];
           const sortedRows = isFinished
             ? [...matchRows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
@@ -341,8 +347,8 @@ export default async function HoyPage() {
                       <span className="text-2xl font-bold tabular-nums">
                         {displayHome}{" — "}{displayAway}
                       </span>
-                      {extraTimeBadge && (
-                        <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
+                      {knockoutNote && (
+                        <span className="text-[10px] uppercase tracking-wide text-zinc-400">90 min</span>
                       )}
                     </div>
                   ) : isLive ? (
@@ -365,6 +371,9 @@ export default async function HoyPage() {
                     <span className="hidden text-sm font-semibold sm:block">{m.awayTeamName ?? "Por definir"}</span>
                   </div>
                 </div>
+                {isFinished && knockoutNote && (
+                  <p className="mt-1 text-center text-xs text-zinc-500">{knockoutNote}</p>
+                )}
                 <p className="mt-1 flex items-center justify-center gap-1 text-center text-xs text-zinc-400">
                   {STAGE_LABELS[m.stage] ?? m.stage}
                   {isFinished && <> · <span className="font-medium text-zinc-500">Finalizado</span></>}

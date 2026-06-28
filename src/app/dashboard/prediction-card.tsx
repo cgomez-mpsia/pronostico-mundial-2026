@@ -107,10 +107,14 @@ export function PredictionCard({
 
   const isFinished = matchStatus === "finished";
   const isLive = matchStatus === "live";
-  const extraTimeBadge = extraTime === "pen" ? "pen." : extraTime === "aet" ? "a.e.t." : null;
-
-  const displayHomeScore = extraTime && matchHomeScoreFull !== null ? matchHomeScoreFull : matchHomeScore;
-  const displayAwayScore = extraTime && matchAwayScoreFull !== null ? matchAwayScoreFull : matchAwayScore;
+  // El marcador que muestra (y puntúa) la quiniela es SIEMPRE el de los 90' (BR-003).
+  // El de prórroga/penales va aparte, en una línea informativa debajo.
+  const knockoutNote =
+    extraTime === "aet"
+      ? `Prórroga: ${matchHomeScoreFull ?? "?"} — ${matchAwayScoreFull ?? "?"}`
+      : extraTime === "pen"
+        ? "Penales"
+        : null;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -131,10 +135,10 @@ export function PredictionCard({
         {isFinished ? (
           <div className="flex flex-col items-center">
             <span className="text-2xl font-bold tabular-nums">
-              {displayHomeScore}{" — "}{displayAwayScore}
+              {matchHomeScore}{" — "}{matchAwayScore}
             </span>
-            {extraTimeBadge && (
-              <span className="text-xs text-zinc-400">({extraTimeBadge})</span>
+            {knockoutNote && (
+              <span className="text-[10px] uppercase tracking-wide text-zinc-400">90 min</span>
             )}
           </div>
         ) : isLive ? (
@@ -159,10 +163,11 @@ export function PredictionCard({
         </div>
       </div>
 
-      {/* Equipo que avanza (solo eliminatorias AET/PEN) */}
-      {isFinished && extraTimeBadge && matchWinnerName && (
+      {/* Prórroga/penales (solo eliminatorias) — informativo, NO puntúa */}
+      {isFinished && knockoutNote && (
         <p className="mt-1 text-center text-xs text-zinc-500">
-          Avanza: <span className="font-medium">{matchWinnerName}</span>
+          {knockoutNote}
+          {matchWinnerName && <> · Avanza <span className="font-medium">{matchWinnerName}</span></>}
         </p>
       )}
 

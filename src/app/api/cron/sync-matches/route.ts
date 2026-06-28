@@ -13,9 +13,11 @@
 // resultSource='manual' (lo controla el admin), pero sí espeja su parcial en vivo.
 //
 // Nota: ESPN da el marcador final del partido. Para fase de grupos eso es el de
-// 90' (no hay prórroga). En eliminatorias con prórroga/penales el marcador a 90'
-// lo resuelve el organizador a mano (BR-005); por eso el sync no auto-finaliza
-// partidos que el admin haya puesto en manual.
+// 90' (no hay prórroga). En eliminatorias, la quiniela SOLO cuenta los 90' (BR-003);
+// si el partido se decide en prórroga/penales el marcador de ESPN incluiría goles
+// que no cuentan, así que el sync NO lo auto-finaliza: detecta ese caso
+// (ev.decidedInRegulation === false) y lo deja para que el organizador ingrese el
+// marcador a 90' a mano. También respeta el override manual del admin.
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
@@ -78,6 +80,10 @@ export async function GET(request: NextRequest) {
     resultsApplied: 0,
     skippedManual: 0,
     pendingScore: 0,
+    // Eliminatoria decidida fuera de los 90' (prórroga/penales): no auto-finalizamos
+    // porque el marcador de ESPN incluiría goles que no cuentan (BR-003). El admin
+    // ingresa el marcador a 90' a mano. Aquí se listan para que sepa cuáles atender.
+    pendingExtraTime: [] as string[],
     errors: [] as string[],
   };
 
@@ -103,6 +109,14 @@ export async function GET(request: NextRequest) {
       if (ev.status === "finished") {
         if (isManual) {
           summary.skippedManual++;
+        } else if (!ev.decidedInRegulation) {
+          // Prórroga/penales: el marcador de ESPN no es el de 90'. Lo resuelve el
+          // admin a mano (BR-005). Si llegó un horario nuevo, lo guardamos igual.
+          if (Object.keys(patch).length > 0) {
+            patch.lastSyncedAt = now;
+            await db.update(matches).set(patch).where(eq(matches.id, ours.id));
+          }
+          summary.pendingExtraTime.push(`${ev.homeCode}-${ev.awayCode}`);
         } else if (oriented.home != null && oriented.away != null) {
           const changed =
             ours.status !== "finished" ||
