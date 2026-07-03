@@ -7,6 +7,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { PredictionRow } from "./prediction-row";
 import { CopyButton } from "@/components/copy-button";
 import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
+import { stageHasQualifier } from "@/lib/points";
 
 function formatBOT(date: Date) {
   return new Intl.DateTimeFormat("es-BO", {
@@ -57,7 +58,9 @@ export default async function AdminMatchDetailPage({
       stage: matches.stage,
       tournamentId: matches.tournamentId,
       homeTeamName: homeTeamAlias.name,
+      homeTeamCode: homeTeamAlias.code,
       awayTeamName: awayTeamAlias.name,
+      awayTeamCode: awayTeamAlias.code,
     })
     .from(matches)
     .leftJoin(homeTeamAlias, eq(matches.homeTeamId, homeTeamAlias.id))
@@ -88,6 +91,7 @@ export default async function AdminMatchDetailPage({
       fullName: users.fullName,
       predHome: predictions.homeScore,
       predAway: predictions.awayScore,
+      predQualifierTeamId: predictions.qualifierTeamId,
       isManuallyEntered: predictions.isManuallyEntered,
       totalPoints: matchPoints.totalPoints,
     })
@@ -242,6 +246,12 @@ export default async function AdminMatchDetailPage({
                 existingHome={r.predHome ?? null}
                 existingAway={r.predAway ?? null}
                 deadlinePassed={deadlinePassed}
+                requiresQualifier={stageHasQualifier(matchRows.stage)}
+                existingQualifierTeamId={r.predQualifierTeamId ?? null}
+                homeTeamId={matchRows.homeTeamId}
+                homeTeamCode={matchRows.homeTeamCode}
+                awayTeamId={matchRows.awayTeamId}
+                awayTeamCode={matchRows.awayTeamCode}
               />
             ))}
           </tbody>

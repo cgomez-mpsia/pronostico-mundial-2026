@@ -105,10 +105,13 @@ src/
 |---|---|
 | Acertar el resultado (V/E/D) | +1 |
 | Acertar el score exacto (ingresado manualmente) | +2 adicionales |
-| Máximo por partido | 3 |
+| Acertar el clasificado de la llave (desde octavos, BR-057) | +1 |
+| Máximo por partido | 3 (grupos/r32) · 4 (desde octavos) |
 | Campeón Mundial acertado | +5 (al final del torneo) |
 
-**Caso especial:** pronóstico no ingresado → evaluado como 0-0 internamente (`is_manually_entered = false`). Si el partido termina en empate, el jugador gana 1 punto (acierta el empate), nunca los +2.
+**Caso especial:** pronóstico no ingresado → evaluado como 0-0 internamente (`is_manually_entered = false`). Si el partido termina en empate, el jugador gana 1 punto (acierta el empate), nunca los +2 (ni el +1 del clasificado, que exige pick explícito).
+
+**Regla del clasificado (BR-057, desde octavos — decisión del cliente 03-Jul-2026):** en las etapas `r16`, `qf`, `sf`, `third` y `final` (constante `QUALIFIER_STAGES` en `lib/points.ts`) el pronóstico incluye elegir **qué equipo avanza/gana la llave**. Es **obligatorio**: la API rechaza guardar sin `qualifierTeamId` válido, y si el partido aún no tiene equipos definidos el pronóstico queda **bloqueado** ("cuando se conozcan los rivales"). El +1 es **independiente del marcador** y se mide por el resultado **final** de la llave (90', prórroga o penales): `resolveQualifierTeamId` = `matchWinnerId ?? ganador a 90'`. En la final/tercer puesto se entiende como "quién gana el partido", **aparte** del +5 del campeón. Grupos y `r32` no cambian (máx 3). El pick vive en `predictions.qualifier_team_id`; el punto en `match_points.qualifier_points` (CHECK `total_points <= 4`). Al finalizar un knockout empatado a 90', tanto el form de resultado como el flujo en vivo del admin **exigen** prórroga/penales + ganador (el sync automático nunca cierra esos partidos — los deja pendientes). La tabla en vivo suma el +1 hipotético solo si hay ganador parcial a 90' (en empate el clasificado es desconocido).
 
 **Tope de pronósticos no colocados (BR-006):** un participante solo puede acumular **un máximo de 2 puntos en todo el torneo** por partidos que no pronosticó (sin fila de predicción). Una vez alcanzado el tope, los siguientes partidos no colocados aportan **0**. Los puntos de partidos con pronóstico y los del campeón **no** tienen tope. El tope es acumulado por jugador e independiente del orden, por lo que **no se aplica por partido** sino al agregar el total (cada partido sigue guardando sus puntos crudos en `match_points`):
 - Cálculo por partido: `lib/points.ts` → `calculateMatchPoints` (sin cambios, da el punto crudo).

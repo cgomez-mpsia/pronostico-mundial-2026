@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, participants, matches, predictions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { stageHasQualifier } from "@/lib/points";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autenticado." }, { status: 401 });
   }
 
-  const { matchId, homeScore, awayScore, participantId: targetParticipantId } = await request.json();
+  const { matchId, homeScore, awayScore, qualifierTeamId, participantId: targetParticipantId } = await request.json();
 
   if (
     !matchId ||
@@ -38,11 +39,36 @@ export async function POST(request: NextRequest) {
   // Verificar que el partido existe y está abierto
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, deadlineAt: true, status: true, tournamentId: true },
+    columns: { id: true, deadlineAt: true, status: true, tournamentId: true, stage: true, homeTeamId: true, awayTeamId: true },
   });
 
   if (!match) {
     return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
+  }
+
+  // BR-057: desde octavos el pronóstico DEBE incluir al clasificado de la llave
+  const requiresQualifier = stageHasQualifier(match.stage);
+
+  if (requiresQualifier) {
+    if (!match.homeTeamId || !match.awayTeamId) {
+      // Sin equipos definidos no hay clasificado que elegir → se bloquea el pronóstico
+      return NextResponse.json(
+        { error: "Este partido aún no tiene los equipos definidos. Podrás pronosticar cuando se conozcan los rivales." },
+        { status: 400 }
+      );
+    }
+    if (!qualifierTeamId) {
+      return NextResponse.json(
+        { error: "Debes elegir qué equipo clasifica a la siguiente ronda." },
+        { status: 400 }
+      );
+    }
+    if (qualifierTeamId !== match.homeTeamId && qualifierTeamId !== match.awayTeamId) {
+      return NextResponse.json(
+        { error: "El clasificado debe ser uno de los dos equipos del partido." },
+        { status: 400 }
+      );
+    }
   }
 
   if (match.status === "finished") {
@@ -102,6 +128,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Upsert de la predicción — .returning() para detectar fallos silenciosos del driver
+  const savedQualifierTeamId = requiresQualifier ? qualifierTeamId : null;
   const result = await db
     .insert(predictions)
     .values({
@@ -110,6 +137,7 @@ export async function POST(request: NextRequest) {
       homeScore,
       awayScore,
       isManuallyEntered: true,
+      qualifierTeamId: savedQualifierTeamId,
     })
     .onConflictDoUpdate({
       target: [predictions.participantId, predictions.matchId],
@@ -117,6 +145,7 @@ export async function POST(request: NextRequest) {
         homeScore,
         awayScore,
         isManuallyEntered: true,
+        qualifierTeamId: savedQualifierTeamId,
         submittedAt: new Date(),
       },
     })

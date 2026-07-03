@@ -4,7 +4,13 @@ import { db } from "@/db";
 import { tournaments, participants, users, matchPoints, teams, matches, predictions } from "@/db/schema";
 import { eq, or, sql, and, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { calculateMatchPoints, applyUnplacedCap, UNPLACED_POINTS_CAP } from "@/lib/points";
+import {
+  calculateMatchPoints,
+  applyUnplacedCap,
+  UNPLACED_POINTS_CAP,
+  stageHasQualifier,
+  resolveQualifierTeamId,
+} from "@/lib/points";
 
 export async function GET() {
   const supabase = await createClient();
@@ -76,6 +82,9 @@ export async function GET() {
       homeScore: matches.homeScore,
       awayScore: matches.awayScore,
       scheduledAt: matches.scheduledAt,
+      stage: matches.stage,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
     })
     .from(matches)
     .where(and(eq(matches.tournamentId, tournament.id), eq(matches.status, "live")));
@@ -102,6 +111,7 @@ export async function GET() {
         homeScore: predictions.homeScore,
         awayScore: predictions.awayScore,
         isManuallyEntered: predictions.isManuallyEntered,
+        qualifierTeamId: predictions.qualifierTeamId,
       })
       .from(predictions)
       .where(inArray(predictions.matchId, liveMatchIds));
@@ -117,11 +127,26 @@ export async function GET() {
         if (lm.homeScore === null || lm.awayScore === null) continue;
         const pred = predMap.get(`${row.participantId}:${lm.id}`) ?? null;
         const isPlaced = pred !== null && pred.isManuallyEntered;
+        // BR-057: clasificado hipotético "si el partido terminara ahora": el que
+        // va ganando a 90'. En empate es desconocido (iría a prórroga) → sin +1.
+        const liveQualifier = stageHasQualifier(lm.stage)
+          ? {
+              predictedTeamId: pred?.qualifierTeamId ?? null,
+              actualTeamId: resolveQualifierTeamId(lm.stage, {
+                homeScore: lm.homeScore,
+                awayScore: lm.awayScore,
+                homeTeamId: lm.homeTeamId,
+                awayTeamId: lm.awayTeamId,
+                matchWinnerId: null,
+              }),
+            }
+          : undefined;
         const pts = calculateMatchPoints(
           pred
             ? { homeScore: pred.homeScore, awayScore: pred.awayScore, isManuallyEntered: pred.isManuallyEntered }
             : null,
-          { homeScore: lm.homeScore, awayScore: lm.awayScore }
+          { homeScore: lm.homeScore, awayScore: lm.awayScore },
+          liveQualifier
         ).totalPoints;
         contribs.push({ pts, isPlaced });
       }

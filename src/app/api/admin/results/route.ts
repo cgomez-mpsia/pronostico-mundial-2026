@@ -55,15 +55,28 @@ export async function POST(request: NextRequest) {
   // 3. Verificar que el partido existe
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, tournamentId: true, status: true, stage: true },
+    columns: { id: true, tournamentId: true, status: true, stage: true, homeTeamId: true, awayTeamId: true },
   });
 
   if (!match) {
     return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
   }
 
+  if (matchWinnerId && matchWinnerId !== match.homeTeamId && matchWinnerId !== match.awayTeamId) {
+    return NextResponse.json({ error: "El ganador debe ser uno de los dos equipos del partido." }, { status: 400 });
+  }
+
   if (match.stage === "group" && extraTime) {
     return NextResponse.json({ error: "Los partidos de fase de grupos no pueden tener tiempo extra." }, { status: 400 });
+  }
+
+  // BR-057: en eliminatorias, un empate a 90' debe traer cómo se resolvió la
+  // llave — sin ganador no se puede puntuar el clasificado.
+  if (match.stage !== "group" && homeScore === awayScore && !extraTime) {
+    return NextResponse.json(
+      { error: "Empate a los 90' en eliminatoria: indica prórroga o penales y el equipo que avanza." },
+      { status: 400 }
+    );
   }
 
   // 4. Aplicar resultado y recalcular puntos · source='manual' (el organizador lo ingresó)

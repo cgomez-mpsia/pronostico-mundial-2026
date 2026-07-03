@@ -129,6 +129,9 @@ export const predictions = pgTable(
     // true = ingresado manualmente → elegible para +2 pts por score exacto · BR-004
     // La ausencia de fila equivale a no pronosticar (0-0 por defecto en el cálculo)
     isManuallyEntered: boolean("is_manually_entered").notNull().default(true),
+    // equipo que el participante eligió como clasificado de la llave · BR-057
+    // Obligatorio en etapas desde octavos (r16..final); null en grupos/r32
+    qualifierTeamId: uuid("qualifier_team_id").references(() => teams.id),
   },
   (t) => [
     unique("predictions_participant_match_unique").on(t.participantId, t.matchId),
@@ -146,13 +149,15 @@ export const matchPoints = pgTable(
     predictionId: uuid("prediction_id").references(() => predictions.id),
     matchId: uuid("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
     participantId: uuid("participant_id").notNull().references(() => participants.id, { onDelete: "cascade" }),
-    resultPoints: integer("result_points").notNull().default(0),  // 0 o 1
-    exactPoints: integer("exact_points").notNull().default(0),    // 0 o 2
-    totalPoints: integer("total_points").notNull().default(0),    // máx 3
+    resultPoints: integer("result_points").notNull().default(0),       // 0 o 1
+    exactPoints: integer("exact_points").notNull().default(0),         // 0 o 2
+    qualifierPoints: integer("qualifier_points").notNull().default(0), // 0 o 1 · BR-057
+    totalPoints: integer("total_points").notNull().default(0),         // máx 3 (grupos/r32) · 4 (desde octavos)
   },
   (t) => [
     unique("match_points_participant_match_unique").on(t.participantId, t.matchId),
-    check("match_points_total_check", sql`${t.totalPoints} <= 3`),
+    check("match_points_total_check", sql`${t.totalPoints} <= 4`),
+    check("match_points_qualifier_check", sql`${t.qualifierPoints} IN (0, 1)`),
   ]
 );
 

@@ -5,7 +5,7 @@ import { users, participants, tournaments, teams, matches, predictions, matchPoi
 import { eq, and, or, asc, desc, lte, ne, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { UserAvatar } from "@/components/user-avatar";
-import { UNPLACED_POINTS_CAP } from "@/lib/points";
+import { UNPLACED_POINTS_CAP, stageHasQualifier } from "@/lib/points";
 import { cappedTotalSql } from "@/lib/standings";
 import { ProfileTabs } from "./profile-tabs";
 
@@ -67,6 +67,7 @@ export default async function ProfilePage({
       matchId: matchPoints.matchId,
       resultPoints: matchPoints.resultPoints,
       exactPoints: matchPoints.exactPoints,
+      qualifierPoints: matchPoints.qualifierPoints,
       totalPoints: matchPoints.totalPoints,
       scheduledAt: matches.scheduledAt,
       stage: matches.stage,
@@ -236,7 +237,9 @@ export default async function ProfilePage({
           isManuallyEntered: r.isManuallyEntered ?? false,
           resultPoints: r.resultPoints,
           exactPoints: r.exactPoints,
+          qualifierPoints: r.qualifierPoints,
           totalPoints: r.totalPoints,
+          hasQualifier: stageHasQualifier(r.stage),
           cappedOut: r.cappedOut,
         }))}
         championPoints={participant.championPoints}

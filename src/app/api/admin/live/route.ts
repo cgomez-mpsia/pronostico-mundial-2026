@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, homeTeamId: true, awayTeamId: true, lastSyncedAt: true },
+    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, homeTeamId: true, awayTeamId: true, lastSyncedAt: true, stage: true },
   });
   if (!match) return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
 
@@ -144,12 +144,46 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "finish") {
-    // El partido en vivo se decide a los 90 min (sin prórroga en este flujo manual).
+    // En knockout con empate a 90', el organizador debe indicar cómo se resolvió
+    // la llave (prórroga/penales + ganador) — el +1 del clasificado depende de
+    // esto · BR-057. En grupos (o knockout con ganador a 90') se finaliza directo.
+    const { extraTime, matchWinnerId, homeScoreFull, awayScoreFull } = body as {
+      extraTime?: "aet" | "pen" | null;
+      matchWinnerId?: string | null;
+      homeScoreFull?: number | null;
+      awayScoreFull?: number | null;
+    };
+
+    const isKnockout = match.stage !== "group";
+    const drawAt90 = currentHome === currentAway;
+
+    if (isKnockout && drawAt90) {
+      if (!extraTime || !["aet", "pen"].includes(extraTime)) {
+        return NextResponse.json(
+          { error: "Empate a los 90': indica cómo se resolvió (prórroga o penales).", needsResolution: true },
+          { status: 400 }
+        );
+      }
+      if (!matchWinnerId || (matchWinnerId !== match.homeTeamId && matchWinnerId !== match.awayTeamId)) {
+        return NextResponse.json({ error: "Debes indicar el equipo que avanza." }, { status: 400 });
+      }
+      if (typeof homeScoreFull !== "number" || typeof awayScoreFull !== "number") {
+        return NextResponse.json({ error: "Se requiere el marcador a los 120 min." }, { status: 400 });
+      }
+    } else if (extraTime || matchWinnerId) {
+      return NextResponse.json({ error: "Prórroga/ganador solo aplican a eliminatorias empatadas a 90'." }, { status: 400 });
+    }
+
+    const withResolution = isKnockout && drawAt90;
     const participantCount = await applyMatchResult({
       matchId,
       tournamentId: match.tournamentId,
       homeScore: currentHome,
       awayScore: currentAway,
+      homeScoreFull: withResolution ? homeScoreFull : null,
+      awayScoreFull: withResolution ? awayScoreFull : null,
+      extraTime: withResolution ? extraTime : null,
+      matchWinnerId: withResolution ? matchWinnerId : null,
       source: "manual",
     });
 

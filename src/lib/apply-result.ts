@@ -1,4 +1,4 @@
-// Aplicación de un resultado a un partido + recálculo de puntos · BR-002..BR-005
+// Aplicación de un resultado a un partido + recálculo de puntos · BR-002..BR-005, BR-057
 //
 // Lógica compartida por las tres rutas que finalizan un partido:
 //   · admin/results  → el organizador ingresa el marcador a mano (source='manual')
@@ -11,7 +11,7 @@
 import { db } from "@/db";
 import { matches, participants, predictions, matchPoints } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { calculateMatchPoints } from "@/lib/points";
+import { calculateMatchPoints, stageHasQualifier, resolveQualifierTeamId } from "@/lib/points";
 
 export type ApplyResultParams = {
   matchId: string;
@@ -63,6 +63,7 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
       homeScore: predictions.homeScore,
       awayScore: predictions.awayScore,
       isManuallyEntered: predictions.isManuallyEntered,
+      qualifierTeamId: predictions.qualifierTeamId,
       predictionId: predictions.id,
     })
     .from(predictions)
@@ -70,6 +71,23 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
 
   const predByParticipant = new Map(matchPredictions.map((p) => [p.participantId, p]));
   const result = { homeScore, awayScore };
+
+  // BR-057: clasificado real de la llave (solo etapas desde octavos). Se resuelve
+  // con el estado FINAL del partido: ganador a 90' o matchWinnerId (prórroga/penales).
+  const matchRow = await db.query.matches.findFirst({
+    where: eq(matches.id, matchId),
+    columns: { stage: true, homeTeamId: true, awayTeamId: true },
+  });
+  const hasQualifier = matchRow != null && stageHasQualifier(matchRow.stage);
+  const actualQualifierTeamId = hasQualifier
+    ? resolveQualifierTeamId(matchRow.stage, {
+        homeScore,
+        awayScore,
+        homeTeamId: matchRow.homeTeamId,
+        awayTeamId: matchRow.awayTeamId,
+        matchWinnerId: matchWinnerId ?? null,
+      })
+    : null;
 
   await db.transaction(async (tx) => {
     await tx
@@ -96,7 +114,11 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
               isManuallyEntered: pred.isManuallyEntered,
             }
           : null,
-        result
+        result,
+        // BR-057: solo en etapas con clasificado; un no colocado nunca gana el +1
+        hasQualifier
+          ? { predictedTeamId: pred?.qualifierTeamId ?? null, actualTeamId: actualQualifierTeamId }
+          : undefined
       );
 
       // BR-006: "no colocado" = no ingresó pronóstico manualmente. Enlazamos
@@ -117,6 +139,7 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
           predictionId: placedPredictionId,
           resultPoints: points.resultPoints,
           exactPoints: points.exactPoints,
+          qualifierPoints: points.qualifierPoints,
           totalPoints: points.totalPoints,
         })
         .onConflictDoUpdate({
@@ -125,6 +148,7 @@ export async function applyMatchResult(params: ApplyResultParams): Promise<numbe
             predictionId: placedPredictionId,
             resultPoints: points.resultPoints,
             exactPoints: points.exactPoints,
+            qualifierPoints: points.qualifierPoints,
             totalPoints: points.totalPoints,
           },
         });

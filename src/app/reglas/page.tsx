@@ -91,6 +91,70 @@ export default async function ReglasPage() {
         </p>
       </section>
 
+      {/* BR-057: regla del clasificado en eliminatorias (desde octavos) */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+          Eliminatorias — el Clasificado (desde Octavos)
+        </h2>
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          A partir de <strong>octavos de final</strong>, además del marcador debes elegir{" "}
+          <strong>qué selección clasifica</strong> a la siguiente ronda. Es{" "}
+          <strong>obligatorio</strong>: la app no te deja guardar el pronóstico sin marcarlo.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-zinc-500">
+                <th className="pb-2 pr-6 font-medium">Acierto</th>
+                <th className="pb-2 font-medium text-right">Puntos</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y text-zinc-700 dark:text-zinc-300">
+              <tr>
+                <td className="py-2 pr-6">Acertar el resultado a 90&apos; (gana / empata / pierde)</td>
+                <td className="py-2 text-right tabular-nums font-medium">+1</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-6">Acertar el marcador exacto a 90&apos;</td>
+                <td className="py-2 text-right tabular-nums font-medium">+2</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-6">Acertar quién clasifica</td>
+                <td className="py-2 text-right tabular-nums font-medium">+1</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-6 font-medium">Máximo por partido</td>
+                <td className="py-2 text-right tabular-nums font-semibold">4</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ul className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <li>
+            El marcador sigue contando <strong>solo los 90 minutos</strong>: la prórroga y los
+            penales no suman goles al marcador.
+          </li>
+          <li>
+            El <strong>clasificado</strong> se mide por el resultado <strong>final</strong> de la
+            llave: da igual si se define en los 90&apos;, en tiempo extra o en penales.
+          </li>
+          <li>
+            Aplica a <strong>octavos, cuartos, semifinales, tercer puesto y final</strong>. En la
+            final y el tercer puesto se entiende como <strong>quién gana el partido</strong>; en la
+            final, ese punto es aparte del bono de +5 por acertar al Campeón.
+          </li>
+          <li>
+            En fase de grupos y dieciseisavos no cambia nada: sigue siendo máximo{" "}
+            <strong>3 puntos</strong> por partido.
+          </li>
+        </ul>
+        <p className="text-xs text-zinc-400">
+          Ejemplo: pronosticas 1-1 y eliges a Argentina. Termina 1-1 y Argentina gana por penales →
+          2 (exacto) + 1 (empate a 90&apos;) + 1 (clasificado) = 4 puntos. Si pronosticabas Brasil 2-1 y
+          Brasil pasa por penales tras un 1-1, ganas solo el +1 del clasificado.
+        </p>
+      </section>
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
           Distribución del Pozo

@@ -1,4 +1,41 @@
-// Motor de cálculo de puntos por partido · BR-002, BR-003, BR-004, BR-005, BR-006
+// Motor de cálculo de puntos por partido · BR-002, BR-003, BR-004, BR-005, BR-006, BR-057
+
+/**
+ * BR-057: etapas donde el pronóstico incluye elegir al CLASIFICADO de la llave
+ * (obligatorio). Desde octavos de final; r32 y grupos quedan fuera (decisión
+ * del cliente, 03-Jul-2026). En 'third' y 'final' se entiende como "quién gana
+ * el partido" (incluyendo prórroga/penales).
+ */
+export const QUALIFIER_STAGES = ["r16", "qf", "sf", "third", "final"] as const;
+
+export function stageHasQualifier(stage: string): boolean {
+  return (QUALIFIER_STAGES as readonly string[]).includes(stage);
+}
+
+/**
+ * Resuelve qué equipo avanza/gana la llave según el resultado final · BR-057.
+ *
+ * Prioridad: matchWinnerId (definido por el admin cuando hubo prórroga/penales)
+ * y, si no, el ganador a los 90'. Devuelve null si la etapa no lleva clasificado
+ * o si el dato está incompleto (empate a 90' sin matchWinnerId — no debería
+ * ocurrir: el flujo admin lo exige antes de finalizar).
+ */
+export function resolveQualifierTeamId(
+  stage: string,
+  match: {
+    homeScore: number;
+    awayScore: number;
+    homeTeamId: string | null;
+    awayTeamId: string | null;
+    matchWinnerId: string | null;
+  }
+): string | null {
+  if (!stageHasQualifier(stage)) return null;
+  if (match.matchWinnerId) return match.matchWinnerId;
+  if (match.homeScore > match.awayScore) return match.homeTeamId;
+  if (match.awayScore > match.homeScore) return match.awayTeamId;
+  return null; // empate a 90' sin ganador registrado → dato incompleto
+}
 
 /**
  * BR-006: tope de puntos acumulables por partidos SIN pronóstico colocado.
@@ -70,10 +107,22 @@ export type MatchResult = {
   awayScore: number;
 };
 
+/**
+ * Pronóstico y resultado del clasificado de la llave · BR-057.
+ * `undefined` (no pasar el arg) = etapa sin clasificado (grupos/r32) → 0 pts.
+ * predictedTeamId null = el participante no eligió (pronóstico pre-regla o no
+ * colocado); actualTeamId null = dato incompleto. En ambos casos no hay +1.
+ */
+export type QualifierInput = {
+  predictedTeamId: string | null;
+  actualTeamId: string | null;
+};
+
 export type MatchPointsResult = {
-  resultPoints: number; // 0 o 1
-  exactPoints: number;  // 0 o 2
-  totalPoints: number;  // máx 3
+  resultPoints: number;    // 0 o 1
+  exactPoints: number;     // 0 o 2
+  qualifierPoints: number; // 0 o 1 · BR-057 (solo etapas desde octavos)
+  totalPoints: number;     // máx 3 en grupos/r32 · máx 4 desde octavos
 };
 
 type Outcome = "home" | "away" | "draw";
@@ -91,10 +140,14 @@ function getOutcome(home: number, away: number): Outcome {
  * BR-003: +2 adicionales por score exacto (solo si isManuallyEntered=true)
  * BR-004: pronóstico null → evaluado como 0-0 con isManuallyEntered=false
  * BR-005: solo 90 minutos reglamentarios (prórroga y penales ignorados)
+ * BR-057: +1 por acertar el clasificado de la llave (desde octavos), medido
+ *         por el resultado FINAL (90', prórroga o penales) e independiente
+ *         del marcador. Sin `qualifier` (grupos/r32) → 0.
  */
 export function calculateMatchPoints(
   prediction: PredictionInput,
-  result: MatchResult
+  result: MatchResult,
+  qualifier?: QualifierInput
 ): MatchPointsResult {
   // BR-004: null se trata como 0-0 no ingresado manualmente
   const pred = prediction ?? { homeScore: 0, awayScore: 0, isManuallyEntered: false };
@@ -109,9 +162,18 @@ export function calculateMatchPoints(
     pred.homeScore === result.homeScore && pred.awayScore === result.awayScore;
   const exactPoints = pred.isManuallyEntered && isExactScore ? 2 : 0;
 
+  // BR-057: +1 por clasificado acertado (ambos lados deben estar definidos)
+  const qualifierPoints =
+    qualifier != null &&
+    qualifier.predictedTeamId != null &&
+    qualifier.predictedTeamId === qualifier.actualTeamId
+      ? 1
+      : 0;
+
   return {
     resultPoints,
     exactPoints,
-    totalPoints: resultPoints + exactPoints,
+    qualifierPoints,
+    totalPoints: resultPoints + exactPoints + qualifierPoints,
   };
 }

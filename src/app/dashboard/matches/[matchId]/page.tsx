@@ -8,6 +8,7 @@ import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
 import { fetchEspnByCodes, fetchEspnSummary, type EspnMatch, type LiveEvent } from "@/lib/espn";
 import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
+import { stageHasQualifier } from "@/lib/points";
 import { MatchTimeline } from "./match-timeline";
 
 function formatBOT(date: Date) {
@@ -125,9 +126,11 @@ export default async function MatchDetailPage({
       userId: participants.userId,
       predHomeScore: predictions.homeScore,
       predAwayScore: predictions.awayScore,
+      predQualifierTeamId: predictions.qualifierTeamId,
       isManuallyEntered: predictions.isManuallyEntered,
       resultPoints: matchPoints.resultPoints,
       exactPoints: matchPoints.exactPoints,
+      qualifierPoints: matchPoints.qualifierPoints,
       totalPoints: matchPoints.totalPoints,
     })
     .from(participants)
@@ -150,6 +153,18 @@ export default async function MatchDetailPage({
     .orderBy(users.fullName);
 
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
+
+  // BR-057: desde octavos el pronóstico incluye al clasificado (máx 4 pts)
+  const hasQualifier = stageHasQualifier(matchRows.stage);
+  const maxPoints = hasQualifier ? 4 : 3;
+  const qualifierCode = (id: string | null) =>
+    id == null
+      ? null
+      : id === matchRows.homeTeamId
+        ? (matchRows.homeTeamCode ?? null)
+        : id === matchRows.awayTeamId
+          ? (matchRows.awayTeamCode ?? null)
+          : null;
 
   // BR-006: puntos efectivos por participante en ESTE partido. Un empate no
   // colocado cuyo punto ya está topado en el total se muestra como 0, igual que
@@ -178,7 +193,10 @@ export default async function MatchDetailPage({
     ? [...rows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
     : rows;
   for (const r of sortedRows) {
-    const pred = r.isManuallyEntered ? `${r.predHomeScore}-${r.predAwayScore}` : "sin pronóstico";
+    const qualPick = hasQualifier && r.isManuallyEntered ? qualifierCode(r.predQualifierTeamId) : null;
+    const pred = r.isManuallyEntered
+      ? `${r.predHomeScore}-${r.predAwayScore}${qualPick ? ` (pasa ${qualPick})` : ""}`
+      : "sin pronóstico";
     if (isFinished && r.totalPoints !== null) {
       const eff = effPoints(r) ?? 0;
       const pts = eff === 1 ? "1 pt" : `${eff} pts`;
@@ -306,6 +324,9 @@ export default async function MatchDetailPage({
               <tr className="border-b text-left text-xs text-zinc-500">
                 <th className="pb-2 pr-4 font-medium">Participante</th>
                 <th className="pb-2 pr-4 font-medium text-center">Pronóstico</th>
+                {hasQualifier && (
+                  <th className="pb-2 pr-4 font-medium text-center">Pasa</th>
+                )}
                 {isFinished && (
                   <th className="pb-2 font-medium text-right">Pts</th>
                 )}
@@ -343,12 +364,32 @@ export default async function MatchDetailPage({
                           ? `${r.predHomeScore} — ${r.predAwayScore}`
                           : <span className="text-zinc-300 dark:text-zinc-600">—</span>}
                       </td>
+                      {hasQualifier && (
+                        <td className="py-2.5 pr-4 text-center text-zinc-500">
+                          {hasPred && r.predQualifierTeamId ? (
+                            <span
+                              className={
+                                isFinished
+                                  ? (r.qualifierPoints ?? 0) > 0
+                                    ? "font-semibold text-success"
+                                    : "text-zinc-400 line-through"
+                                  : "font-medium"
+                              }
+                              title={isFinished ? ((r.qualifierPoints ?? 0) > 0 ? "Acertó el clasificado (+1)" : "No acertó el clasificado") : undefined}
+                            >
+                              {qualifierCode(r.predQualifierTeamId)}
+                            </span>
+                          ) : (
+                            <span className="text-zinc-300 dark:text-zinc-600">—</span>
+                          )}
+                        </td>
+                      )}
                       {isFinished && (
                         <td className="py-2.5 text-right tabular-nums">
                           {r.totalPoints != null ? (
                             <span
                               className={
-                                pts === 3
+                                pts === maxPoints
                                   ? "font-bold text-success"
                                   : (pts ?? 0) > 0
                                     ? "font-medium text-info"

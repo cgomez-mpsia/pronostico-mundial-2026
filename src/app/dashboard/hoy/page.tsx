@@ -6,7 +6,7 @@ import { participants, tournaments, users, matches, predictions, matchPoints, te
 import { eq, or, gte, lt, and, inArray, isNull, isNotNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
-import { UNPLACED_POINTS_CAP } from "@/lib/points";
+import { UNPLACED_POINTS_CAP, stageHasQualifier } from "@/lib/points";
 import { getCappedOutUnplacedKeys, cappedOutKey } from "@/lib/standings";
 
 const hoyPairKey = (a?: string | null, b?: string | null) => (a && b ? [a, b].sort().join("|") : "");
@@ -85,6 +85,8 @@ export default async function HoyPage() {
       homeScoreFull: matches.homeScoreFull,
       awayScoreFull: matches.awayScoreFull,
       extraTime: matches.extraTime,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
       homeTeamName: homeTeam.name,
       homeTeamCode: homeTeam.code,
       homeTeamFlagUrl: homeTeam.flagUrl,
@@ -116,9 +118,11 @@ export default async function HoyPage() {
           userId: participants.userId,
           predHome: predictions.homeScore,
           predAway: predictions.awayScore,
+          predQualifierTeamId: predictions.qualifierTeamId,
           isManuallyEntered: predictions.isManuallyEntered,
           resultPoints: matchPoints.resultPoints,
           exactPoints: matchPoints.exactPoints,
+          qualifierPoints: matchPoints.qualifierPoints,
           totalPoints: matchPoints.totalPoints,
         })
         .from(participants)
@@ -328,6 +332,11 @@ export default async function HoyPage() {
           const sortedRows = isFinished
             ? [...matchRows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
             : matchRows;
+          // BR-057: desde octavos el pronóstico incluye al clasificado (máx 4 pts)
+          const hasQualifier = stageHasQualifier(m.stage);
+          const maxPts = hasQualifier ? 4 : 3;
+          const qualifierCode = (id: string | null) =>
+            id == null ? null : id === m.homeTeamId ? m.homeTeamCode : id === m.awayTeamId ? m.awayTeamCode : null;
 
           return (
             <div key={m.matchId} className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -396,6 +405,7 @@ export default async function HoyPage() {
                         <tr className="text-left text-xs text-zinc-400">
                           <th className="pb-1.5 pr-4 font-medium">Participante</th>
                           <th className="pb-1.5 pr-4 text-center font-medium">Pronóstico</th>
+                          {hasQualifier && <th className="pb-1.5 pr-4 text-center font-medium">Pasa</th>}
                           {isFinished && <th className="pb-1.5 text-right font-medium">Pts</th>}
                         </tr>
                       </thead>
@@ -418,6 +428,25 @@ export default async function HoyPage() {
                                 ? `${r.predHome} — ${r.predAway}`
                                 : <span className="text-zinc-300 dark:text-zinc-600">—</span>}
                             </td>
+                            {hasQualifier && (
+                              <td className="py-1.5 pr-4 text-center text-zinc-500">
+                                {r.isManuallyEntered && r.predQualifierTeamId ? (
+                                  <span
+                                    className={
+                                      isFinished
+                                        ? (r.qualifierPoints ?? 0) > 0
+                                          ? "font-semibold text-success"
+                                          : "text-zinc-400 line-through"
+                                        : "font-medium"
+                                    }
+                                  >
+                                    {qualifierCode(r.predQualifierTeamId)}
+                                  </span>
+                                ) : (
+                                  <span className="text-zinc-300 dark:text-zinc-600">—</span>
+                                )}
+                              </td>
+                            )}
                             {isFinished && (
                               <td className="py-1.5 text-right tabular-nums">
                                 {r.totalPoints != null ? (() => {
@@ -426,7 +455,7 @@ export default async function HoyPage() {
                                   return (
                                     <span
                                       className={
-                                        pts === 3
+                                        pts === maxPts
                                           ? "font-bold text-success"
                                           : pts > 0
                                             ? "font-medium text-info"

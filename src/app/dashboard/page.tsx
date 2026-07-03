@@ -8,6 +8,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { PredictionCard } from "./prediction-card";
 import { LiveMatchHero } from "./live-match-hero";
 import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
+import { stageHasQualifier } from "@/lib/points";
 
 const pairKey = (a?: string | null, b?: string | null) => (a && b ? [a, b].sort().join("|") : "");
 
@@ -126,6 +127,7 @@ export default async function DashboardPage() {
           matchId: predictions.matchId,
           homeScore: predictions.homeScore,
           awayScore: predictions.awayScore,
+          qualifierTeamId: predictions.qualifierTeamId,
         })
         .from(predictions)
         .where(eq(predictions.participantId, participant.id))
@@ -210,9 +212,11 @@ export default async function DashboardPage() {
                     <PredictionCard
                       key={m.matchId}
                       matchId={m.matchId}
+                      homeTeamId={m.homeTeamId ?? null}
                       homeTeamName={m.homeTeamName ?? "Por definir"}
                       homeTeamCode={m.homeTeamCode ?? "TBD"}
                       homeTeamFlagUrl={m.homeTeamFlagUrl ?? null}
+                      awayTeamId={m.awayTeamId ?? null}
                       awayTeamName={m.awayTeamName ?? "Por definir"}
                       awayTeamCode={m.awayTeamCode ?? "TBD"}
                       awayTeamFlagUrl={m.awayTeamFlagUrl ?? null}
@@ -231,6 +235,8 @@ export default async function DashboardPage() {
                       liveMinute={m.status === "live" ? liveMinuteByPair.get(pairKey(m.homeTeamCode, m.awayTeamCode)) ?? null : null}
                       prediction={predMap.get(m.matchId) ?? null}
                       hasPaid={participant?.hasPaid ?? false}
+                      requiresQualifier={stageHasQualifier(m.stage)}
+                      qualifierLabel={m.stage === "final" || m.stage === "third" ? "gana" : "clasifica"}
                     />
                   );
                 })}

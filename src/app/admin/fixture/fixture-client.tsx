@@ -264,6 +264,9 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                     <LiveControls
                       matchId={m.matchId}
                       status={m.status}
+                      stage={m.stage}
+                      homeTeamId={m.homeTeamId}
+                      awayTeamId={m.awayTeamId}
                       homeScore={m.homeScore}
                       awayScore={m.awayScore}
                       homeTeamName={homeName}
@@ -293,6 +296,9 @@ export function FixtureClient({ tournamentName, upcomingMatches, finishedMatches
                       <LiveControls
                         matchId={m.matchId}
                         status={m.status}
+                        stage={m.stage}
+                        homeTeamId={m.homeTeamId}
+                        awayTeamId={m.awayTeamId}
                         homeScore={m.homeScore}
                         awayScore={m.awayScore}
                         homeTeamName={homeName}

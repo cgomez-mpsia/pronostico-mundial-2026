@@ -14,7 +14,10 @@ interface BreakdownRow {
   isManuallyEntered: boolean;
   resultPoints: number;
   exactPoints: number;
+  qualifierPoints: number; // 0 o 1 · BR-057 (solo etapas desde octavos)
   totalPoints: number;
+  // BR-057: true si la etapa exige clasificado (máx 4 pts en vez de 3)
+  hasQualifier?: boolean;
   // BR-006: true si el punto de este partido no colocado no cuenta (tope alcanzado)
   cappedOut?: boolean;
 }
@@ -217,7 +220,12 @@ export function ProfileTabs({
                               0 <span className="text-[10px]">(tope)</span>
                             </span>
                           ) : (
-                            <PointsBadge result={r.resultPoints} exact={r.exactPoints} />
+                            <PointsBadge
+                              result={r.resultPoints}
+                              exact={r.exactPoints}
+                              qualifier={r.qualifierPoints}
+                              max={r.hasQualifier ? 4 : 3}
+                            />
                           )}
                         </td>
                       </tr>
@@ -265,9 +273,10 @@ function Stat({ label, value, sublabel }: { label: string; value: string; sublab
   );
 }
 
-function PointsBadge({ result, exact }: { result: number; exact: number }) {
-  const total = result + exact;
+function PointsBadge({ result, exact, qualifier = 0, max = 3 }: { result: number; exact: number; qualifier?: number; max?: number }) {
+  const total = result + exact + qualifier;
   if (total === 0) return <span className="text-zinc-400">0</span>;
-  if (total === 3) return <span className="font-semibold text-success">+3</span>;
+  // Pleno: 3 en grupos/r32 · 4 desde octavos (exacto + clasificado) · BR-057
+  if (total === max) return <span className="font-semibold text-success">+{total}</span>;
   return <span className="font-medium text-info">+{total}</span>;
 }
