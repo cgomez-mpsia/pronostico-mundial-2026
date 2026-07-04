@@ -191,9 +191,10 @@ export default async function AdminMatchDetailPage({
   }
   if (missingQualifierRows.length > 0) {
     if (missingRows.length > 0) missingLines.push("");
+    // Solo nombres: este texto se comparte ANTES del partido — no revelar marcadores
     missingLines.push(`Les falta elegir quién pasa (${missingQualifierRows.length}):`);
     for (const r of missingQualifierRows) {
-      missingLines.push(`• ${r.fullName} (puso ${r.predHome}-${r.predAway})`);
+      missingLines.push(`• ${r.fullName}`);
     }
   }
   const missingText = missingLines.join("\n");
