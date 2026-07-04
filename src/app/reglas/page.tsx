@@ -38,8 +38,8 @@ export default async function ReglasPage() {
           <li>Cada participante pronostica el <strong>marcador exacto</strong> de cada partido.</li>
           <li>Solo cuentan los <strong>90 minutos reglamentarios</strong> — prórroga y penales no se consideran.</li>
           <li>
-            El plazo de cierre es <strong>1 hora antes</strong> del inicio de cada partido.
-            Pasada esa hora los pronósticos se bloquean y se publican públicamente.
+            Puedes ingresar o modificar tu pronóstico <strong>hasta que comience el partido</strong>.
+            Al inicio del partido los pronósticos se bloquean y se publican públicamente.
           </li>
           <li>
             Si no ingresas un pronóstico antes del cierre, el sistema lo registra internamente como <strong>0-0</strong>.

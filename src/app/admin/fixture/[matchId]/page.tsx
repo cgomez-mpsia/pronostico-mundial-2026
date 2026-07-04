@@ -117,6 +117,17 @@ export default async function AdminMatchDetailPage({
   const submittedCount = rows.filter((r) => r.isManuallyEntered).length;
   const isFinished = matchRows.status === "finished";
 
+  // BR-057: desde octavos el pronóstico incluye al clasificado
+  const hasQualifier = stageHasQualifier(matchRows.stage);
+  const qualifierCode = (id: string | null) =>
+    id == null
+      ? null
+      : id === matchRows.homeTeamId
+        ? (matchRows.homeTeamCode ?? null)
+        : id === matchRows.awayTeamId
+          ? (matchRows.awayTeamCode ?? null)
+          : null;
+
   // BR-006: puntos efectivos (un no colocado topado cuenta como 0).
   const cappedOut = await getCappedOutUnplacedKeys(matchRows.tournamentId);
   const effPoints = (r: { participantId: string; totalPoints: number | null }) =>
@@ -145,7 +156,11 @@ export default async function AdminMatchDetailPage({
       ? [...rows].sort((a, b) => (effPoints(b) ?? 0) - (effPoints(a) ?? 0))
       : rows;
     for (const r of sorted) {
-      const pred = r.isManuallyEntered ? `${r.predHome}-${r.predAway}` : "sin pronóstico";
+      // BR-057: en knockout el resumen incluye a quién eligió como clasificado
+      const qualPick = hasQualifier && r.isManuallyEntered ? qualifierCode(r.predQualifierTeamId) : null;
+      const pred = r.isManuallyEntered
+        ? `${r.predHome}-${r.predAway}${qualPick ? ` (pasa ${qualPick})` : ""}`
+        : "sin pronóstico";
       if (isFinished && r.totalPoints !== null) {
         const eff = effPoints(r) ?? 0;
         const pts = eff === 1 ? "1 pt" : `${eff} pts`;
@@ -157,15 +172,29 @@ export default async function AdminMatchDetailPage({
   }
   const summaryText = summaryLines.join("\n");
 
-  // Texto para reportar por WhatsApp a quienes NO ingresaron pronóstico
+  // Texto para reportar por WhatsApp a quienes NO ingresaron pronóstico.
+  // BR-057: en knockout también cuenta como pendiente quien puso marcador pero
+  // aún no eligió al clasificado (pronóstico pre-regla).
   const missingRows = rows.filter((r) => !r.isManuallyEntered);
+  const missingQualifierRows = hasQualifier
+    ? rows.filter((r) => r.isManuallyEntered && !r.predQualifierTeamId)
+    : [];
   const missingLines: string[] = [];
   missingLines.push(`⚽ ${home} vs ${away}`);
   missingLines.push(`${stageLine} · ${dateLine}`);
   missingLines.push("");
-  missingLines.push(`Faltan pronosticar (${missingRows.length}/${rows.length}):`);
-  for (const r of missingRows) {
-    missingLines.push(`• ${r.fullName}`);
+  if (missingRows.length > 0) {
+    missingLines.push(`Faltan pronosticar (${missingRows.length}/${rows.length}):`);
+    for (const r of missingRows) {
+      missingLines.push(`• ${r.fullName}`);
+    }
+  }
+  if (missingQualifierRows.length > 0) {
+    if (missingRows.length > 0) missingLines.push("");
+    missingLines.push(`Les falta elegir quién pasa (${missingQualifierRows.length}):`);
+    for (const r of missingQualifierRows) {
+      missingLines.push(`• ${r.fullName} (puso ${r.predHome}-${r.predAway})`);
+    }
   }
   const missingText = missingLines.join("\n");
 
@@ -209,8 +238,8 @@ export default async function AdminMatchDetailPage({
           <span>Partido: {formatBOT(matchRows.scheduledAt)}</span>
           <span>Deadline: {formatBOT(matchRows.deadlineAt)}</span>
           <CopyButton text={summaryText} />
-          {missingRows.length > 0 && (
-            <CopyButton text={missingText} label={`Copiar faltantes (${missingRows.length})`} />
+          {missingRows.length + missingQualifierRows.length > 0 && (
+            <CopyButton text={missingText} label={`Copiar faltantes (${missingRows.length + missingQualifierRows.length})`} />
           )}
         </div>
       </div>

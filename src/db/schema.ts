@@ -87,7 +87,8 @@ export const matches = pgTable(
     homeTeamId: uuid("home_team_id").references(() => teams.id),
     awayTeamId: uuid("away_team_id").references(() => teams.id),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
-    // día anterior a scheduledAt a las 19:00 UTC (15:00 BOT) · RB-04
+    // = scheduledAt: los pronósticos cierran al INICIO del partido · RB-04
+    // (decisión del cliente 04-Jul-2026; ver lib/deadline.ts)
     deadlineAt: timestamp("deadline_at", { withTimezone: true }).notNull(),
     // null hasta que el admin registra el resultado · solo 90 min · RB-03
     homeScore: integer("home_score"),

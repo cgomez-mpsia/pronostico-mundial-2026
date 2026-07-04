@@ -3,7 +3,7 @@
  * Exporta seedMatches() para ser llamado desde setup.ts.
  *
  * Todos los horarios están en BOT (UTC-4).
- * deadlineAt = 1 hora antes del inicio del partido.
+ * deadlineAt = al inicio del partido (ver lib/deadline.ts).
  */
 
 import { config } from "dotenv";
@@ -13,13 +13,13 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { matches, teams, tournaments } from "./schema";
 import { eq } from "drizzle-orm";
+import { calculateDeadline } from "../lib/deadline";
 
 // ─── Conversión BOT → UTC ─────────────────────────────────────────────────────
 
 function botMatch(date: string, time: string): { scheduledAt: Date; deadlineAt: Date } {
   const scheduledAt = new Date(`${date}T${time}:00-04:00`);
-  const deadlineAt = new Date(scheduledAt.getTime() - 60 * 60 * 1000);
-  return { scheduledAt, deadlineAt };
+  return { scheduledAt, deadlineAt: calculateDeadline(scheduledAt) };
 }
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────

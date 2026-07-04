@@ -58,4 +58,4 @@ Eliges a Brasil y avanza Argentina, con marcador distinto.
 - Aplica a **octavos, cuartos, semifinales, tercer puesto y final**.
 - En la **final** y el **tercer puesto**, "quién clasifica" se entiende como **quién gana el partido** (incluyendo prórroga/penales). En la final, ese punto es **aparte** del bono de +5 por acertar al Campeón.
 - En **fase de grupos no cambia nada**: sigue siendo máximo **3 puntos** por partido.
-- El cierre de pronósticos sigue igual: **1 hora antes** de cada partido.
+- El cierre de pronósticos: **hasta que comience** cada partido (actualizado 04-Jul-2026; antes era 1 hora antes).

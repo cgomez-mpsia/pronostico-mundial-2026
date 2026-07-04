@@ -26,8 +26,7 @@ import { eq, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { applyMatchResult } from "@/lib/apply-result";
 import { fetchEspnMatches, espnDateWindow, type EspnMatch } from "@/lib/espn";
-
-const HOUR_MS = 60 * 60 * 1000;
+import { calculateDeadline } from "@/lib/deadline";
 
 // Clave de par de equipos, sin importar local/visitante
 const pairKey = (a: string, b: string) => [a, b].sort().join("|");
@@ -101,7 +100,7 @@ export async function GET(request: NextRequest) {
       const kickoff = new Date(ev.date);
       if (!isManual && !Number.isNaN(kickoff.getTime()) && kickoff.getTime() !== ours.scheduledAt.getTime()) {
         patch.scheduledAt = kickoff;
-        patch.deadlineAt = new Date(kickoff.getTime() - HOUR_MS); // RB-04
+        patch.deadlineAt = calculateDeadline(kickoff); // RB-04
         summary.scheduleUpdated++;
       }
 
