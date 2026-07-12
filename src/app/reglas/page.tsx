@@ -87,7 +87,7 @@ export default async function ReglasPage() {
           </table>
         </div>
         <p className="text-xs text-zinc-400">
-          La elección del campeón es pública desde el inicio y puede modificarse hasta que comience la fase de cuartos de final.
+          La elección del campeón es pública desde el inicio y puede modificarse hasta que comiencen las semifinales.
         </p>
       </section>
 

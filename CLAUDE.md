@@ -98,7 +98,7 @@ src/
 - Solo cuentan los **90 minutos reglamentarios incluyendo tiempo de descuento** (ej. 90+3, 90+6) — prórroga y penales no cuentan. El marcador oficial es el del **pitido final** (decisión del cliente Opción A, 17-May-2026).
 - Plazo de cierre: **al inicio del partido** (hora Bolivia, BOT UTC-4) — decisión del cliente 04-Jul-2026 (antes era 1 hora antes).
 - Pasado el plazo, los pronósticos se **publican públicamente** y se **bloquean**.
-- Antes del partido inaugural se elige el **Campeón Mundial** (visible públicamente desde el inicio).
+- Antes del partido inaugural se elige el **Campeón Mundial** (visible públicamente desde el inicio). Se puede **modificar hasta que comiencen las semifinales** (decisión del cliente, votación unánime 12-Jul-2026; antes se bloqueaba al inicio de cuartos). La regla vive en `lib/champion-lock.ts` (`isChampionLocked`), usada por la page del dashboard y el route `POST /api/champion`.
 
 ### Motor de Puntos
 | Condición | Puntos |

@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { users, participants, tournaments, teams, matches } from "@/db/schema";
-import { eq, or, asc, and } from "drizzle-orm";
+import { participants, tournaments, teams } from "@/db/schema";
+import { eq, or } from "drizzle-orm";
 import { ChampionPicker } from "./champion-picker";
+import { isChampionLocked } from "@/lib/champion-lock";
 
 export default async function ChampionPage() {
   const supabase = await createClient();
@@ -33,21 +34,8 @@ export default async function ChampionPage() {
       })
     : null;
 
-  // Bloqueado cuando el deadline del primer partido de cuartos ya pasó
-  const firstQFMatch = tournament
-    ? await db.query.matches.findFirst({
-        where: and(
-          eq(matches.tournamentId, tournament.id),
-          eq(matches.stage, "qf")
-        ),
-        orderBy: asc(matches.scheduledAt),
-        columns: { deadlineAt: true },
-      })
-    : null;
-
-  const locked = firstQFMatch?.deadlineAt
-    ? firstQFMatch.deadlineAt <= new Date()
-    : false;
+  // Bloqueado cuando comienzan las semifinales · BR-010
+  const locked = tournament ? await isChampionLocked(tournament.id) : false;
 
   return (
     <div className="space-y-6 p-8">
