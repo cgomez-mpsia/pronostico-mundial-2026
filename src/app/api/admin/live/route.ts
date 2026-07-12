@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { users, matches, matchPoints, teams } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { applyMatchResult } from "@/lib/apply-result";
+import { applyMatchResult, espnDecidedInRegulation } from "@/lib/apply-result";
 import { fetchEspnMatches, espnDateWindow } from "@/lib/espn";
 
 const LIVE_ACTIONS = ["start", "goal_home", "goal_away", "undo_home", "undo_away", "finish", "reopen", "refresh"] as const;
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   const match = await db.query.matches.findFirst({
     where: eq(matches.id, matchId),
-    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, homeTeamId: true, awayTeamId: true, lastSyncedAt: true, stage: true },
+    columns: { id: true, status: true, homeScore: true, awayScore: true, tournamentId: true, homeTeamId: true, awayTeamId: true, lastSyncedAt: true, stage: true, scheduledAt: true },
   });
   if (!match) return NextResponse.json({ error: "Partido no encontrado." }, { status: 404 });
 
@@ -82,6 +82,23 @@ export async function POST(request: NextRequest) {
     if (home == null || away == null) {
       await db.update(matches).set({ lastSyncedAt: now }).where(eq(matches.id, matchId));
       return NextResponse.json({ error: "ESPN aún no publica el marcador." }, { status: 409 });
+    }
+
+    // Una vez en prórroga, el marcador de ESPN incluye goles que NO cuentan para
+    // los 90' (BR-003). No lo espejamos: dejaríamos el 120' como si fuera el de 90'
+    // y el cierre lo registraría mal. El admin ingresa el 90' y resuelve la llave
+    // a mano (prórroga/penales + ganador) al "Finalizar" · BR-057.
+    if (!ev.decidedInRegulation) {
+      await db.update(matches).set({ lastSyncedAt: now }).where(eq(matches.id, matchId));
+      return NextResponse.json(
+        {
+          error:
+            "El partido está en prórroga/penales. ESPN ya no da el marcador de 90'. " +
+            "Dejá el marcador reglamentario y usá 'Finalizar' para resolver la llave.",
+          inExtraTime: true,
+        },
+        { status: 409 }
+      );
     }
 
     await db.update(matches).set({ homeScore: home, awayScore: away, lastSyncedAt: now }).where(eq(matches.id, matchId));
@@ -175,6 +192,27 @@ export async function POST(request: NextRequest) {
     }
 
     const withResolution = isKnockout && drawAt90;
+
+    // Red de seguridad: si vamos a cerrar una eliminatoria como resultado liso de
+    // 90' (sin resolución de llave) pero ESPN reporta que fue a prórroga/penales,
+    // el marcador que tenemos incluye goles que NO cuentan (BR-003). No cerramos:
+    // el organizador debe ingresar el 90' y la resolución a mano (Resultados).
+    if (isKnockout && !withResolution) {
+      const decided = await espnDecidedInRegulation(match.homeTeamId, match.awayTeamId, match.scheduledAt);
+      if (decided === false) {
+        return NextResponse.json(
+          {
+            error:
+              "ESPN reporta que este partido fue a prórroga/penales. El marcador en vivo " +
+              "incluye goles de la prórroga, que no cuentan para los 90'. Ingresá el marcador " +
+              "de los 90' y la resolución de la llave desde 'Resultados'.",
+            inExtraTime: true,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const participantCount = await applyMatchResult({
       matchId,
       tournamentId: match.tournamentId,

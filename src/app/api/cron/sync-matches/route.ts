@@ -145,9 +145,17 @@ export async function GET(request: NextRequest) {
           patch.status = ev.status;
           summary.statusUpdated++;
         }
-        // Espejar el parcial en vivo en cada corrida (incluso en manual)
+        // Espejar el parcial en vivo en cada corrida (incluso en manual).
+        // PERO solo mientras el partido siga en los 90' reglamentarios: una vez
+        // que entra en prórroga (ev.decidedInRegulation === false, period > 2 en
+        // ESPN) el marcador de ESPN incluye goles de prórroga que NO cuentan
+        // (BR-003). Espejarlos pisaría el marcador de 90' y, al "Finalizar", el
+        // admin registraría el 120' como si fuera el de 90'. Al no espejar, la
+        // fila conserva el último marcador de 90' (el empate) y el flujo de cierre
+        // exige prórroga/ganador como corresponde · BR-057.
         if (
           ev.status === "live" &&
+          ev.decidedInRegulation &&
           oriented.home != null &&
           oriented.away != null &&
           (ours.homeScore !== oriented.home || ours.awayScore !== oriented.away)

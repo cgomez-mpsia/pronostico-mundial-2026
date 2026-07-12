@@ -9,9 +9,40 @@
 // el origen del resultado (la plata depende de ello).
 
 import { db } from "@/db";
-import { matches, participants, predictions, matchPoints } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { matches, participants, predictions, matchPoints, teams } from "@/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { calculateMatchPoints, stageHasQualifier, resolveQualifierTeamId } from "@/lib/points";
+import { fetchEspnByCodes } from "@/lib/espn";
+
+/**
+ * Red de seguridad (BR-003/BR-023): le pregunta a ESPN si el partido se decidió
+ * dentro de los 90' reglamentarios.
+ *   · true  → ESPN confirma que fue en los 90'.
+ *   · false → ESPN reporta prórroga/penales (su marcador incluye goles que NO
+ *             cuentan para los 90'; cerrar como regla registraría el 120' mal).
+ *   · null  → ESPN no tiene el dato (no arrancó, no matchea, o cayó): NO bloquear.
+ *
+ * La usan las rutas donde el organizador finaliza un partido para impedir cerrar
+ * una eliminatoria como resultado liso de 90' cuando en realidad fue a prórroga.
+ */
+export async function espnDecidedInRegulation(
+  homeTeamId: string | null,
+  awayTeamId: string | null,
+  scheduledAt: Date
+): Promise<boolean | null> {
+  if (!homeTeamId || !awayTeamId) return null;
+  const teamRows = await db
+    .select({ id: teams.id, code: teams.code })
+    .from(teams)
+    .where(inArray(teams.id, [homeTeamId, awayTeamId]));
+  const codeById = new Map(teamRows.map((t) => [t.id, t.code]));
+  const homeCode = codeById.get(homeTeamId);
+  const awayCode = codeById.get(awayTeamId);
+  if (!homeCode || !awayCode) return null;
+
+  const ev = await fetchEspnByCodes(homeCode, awayCode, scheduledAt);
+  return ev ? ev.decidedInRegulation : null;
+}
 
 export type ApplyResultParams = {
   matchId: string;
